@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  kids-task-tracker:
+    build: .
+    container_name: kids-task-tracker
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+    environment:
+      - TZ=America/New_York  # Change to your timezone
+    networks:
+      - kids-tracker-network
+
+networks:
+  kids-tracker-network:
+    driver: bridge

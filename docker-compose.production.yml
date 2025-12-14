@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  kids-task-tracker:
+    build: .
+    container_name: kids-task-tracker
+    restart: unless-stopped
+    environment:
+      - TZ=America/New_York  # Change to your timezone
+    networks:
+      - kids-tracker-network
+
+  # Optional: Nginx reverse proxy for HTTPS
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: kids-tracker-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx-proxy.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro  # SSL certificates (if using HTTPS)
+    depends_on:
+      - kids-task-tracker
+    networks:
+      - kids-tracker-network
+
+networks:
+  kids-tracker-network:
+    driver: bridge
