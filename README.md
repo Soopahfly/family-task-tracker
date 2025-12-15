@@ -1,326 +1,248 @@
-# Kids Task Tracker
+# Family Task Tracker
 
-A fun and colorful web app to help manage kids' chores, track completed tasks, and reward them with points they can redeem for prizes!
+A modern, full-featured family task management system with roles, points, rewards, and smart home integration. Built with React, designed for families.
 
-## Features
+![Family Task Tracker](https://img.shields.io/badge/version-2.0-blue)
+![PWA Ready](https://img.shields.io/badge/PWA-ready-green)
+![Docker](https://img.shields.io/badge/docker-ready-blue)
 
-### Core Features
-- **Kid Profiles**: Create profiles for each child with custom avatars and colors
-- **Task Management**: Create and assign tasks with point values
-- **Points System**: Kids earn points by completing tasks
-- **Rewards Store**: Set up rewards that kids can redeem with their points
-- **Real-time Dashboard**: See all kids' progress at a glance
+## ✨ Features
 
-### New Features
-- **Smart Light Integration**: Connect Home Assistant or WLED lights for visual task status (traffic light system: green=done, yellow=almost, red=pending)
-- **Screen Time Tracker**: Convert points to screen time minutes with customizable rate (e.g., 2 points = 1 minute)
-- **Reward Suggestions**: Kids can suggest rewards and parents can approve/deny with custom point values
-- **Recurring Tasks**: Set tasks to repeat daily or weekly
-- **Kid View Mode**: Kid-friendly interface where kids can see their tasks and rewards (switch with button in header)
-- **Parent View Mode**: Full admin interface with all management controls
-- **Statistics Dashboard**: Track completion rates, weekly progress, and total points earned
-- **Streak Indicators**: Fire emoji badges when kids complete 3+ tasks in a day
-- **Task Categories**: Organize tasks by type (chores, homework, behavior, extra credit)
-- **Visual Progress Tracking**: Colorful cards showing pending and completed tasks
+### Core Functionality
+- 👥 **Family Members with Roles** - Child, Parent, Teen, or Other
+- ✅ **Task Management** - Create, assign, and track tasks
+- 🏆 **Points & Rewards System** - Earn points, redeem rewards
+- 📊 **Dashboard** - Real-time overview of all family members
+- ⏱️ **Screen Time Conversion** - Trade points for screen time minutes
+- 💡 **Reward Suggestions** - Kids suggest, parents approve
 
-## Getting Started
+### Advanced Features
+- 🔐 **Password Protection** - Secure Parent View with session management
+- 💾 **Backup & Restore** - Automatic scheduled backups + manual export/import
+- 🔔 **Deadline Reminders** - Browser notifications for upcoming tasks
+- 💡 **Smart Light Integration** - Home Assistant & WLED traffic light status
+- 📱 **Progressive Web App** - Install on any device like a native app
+- ⚙️ **Modular System** - Enable/disable features as needed
+- 📈 **Statistics** - Track completion rates and progress over time
+- 🔥 **Streak Tracking** - Motivational badges for consistent completion
+
+## 🚀 Quick Start
 
 ### Prerequisites
-- **Node.js** (version 16 or higher)
-  - Download from: https://nodejs.org/
-  - To check if installed, open Command Prompt and type: `node --version`
+- Node.js 18+ (for development)
+- Docker (optional, for production deployment)
 
-### Installation
+### Development Mode
 
-1. **Open Command Prompt** and navigate to the project folder:
-   ```
-   cd c:\Users\soopa\kids-task-tracker
-   ```
+```bash
+# Clone the repository
+git clone https://github.com/YOUR-USERNAME/family-task-tracker.git
+cd family-task-tracker
 
-2. **Install dependencies**:
-   ```
-   npm install
-   ```
+# Install dependencies
+npm install
 
-3. **Start the development server**:
-   ```
-   npm run dev
-   ```
-
-4. **Open your browser** and go to the URL shown in the terminal (usually `http://localhost:5173`)
-
-That's it! The app should now be running.
-
-## Accessing from Other Devices on Your Network
-
-To let other devices in your house (tablets, phones, other computers) access the app:
-
-### Option 1: Using Vite's Network Access (Easiest)
-
-1. **Find your computer's IP address**:
-   - Open Command Prompt
-   - Type: `ipconfig`
-   - Look for "IPv4 Address" under your active network adapter (usually starts with 192.168.x.x or 10.0.x.x)
-
-2. **Start the dev server with network access**:
-   ```
-   npm run dev -- --host
-   ```
-
-3. **On other devices**, open a browser and go to:
-   ```
-   http://YOUR-IP-ADDRESS:5173
-   ```
-   For example: `http://192.168.1.100:5173`
-
-### Option 2: Using a Simple Production Build
-
-1. **Build the app**:
-   ```
-   npm run build
-   ```
-
-2. **Install a simple web server globally**:
-   ```
-   npm install -g serve
-   ```
-
-3. **Serve the built app on your network**:
-   ```
-   serve -s dist -l 3000
-   ```
-
-4. **Access from any device on your network**:
-   ```
-   http://YOUR-IP-ADDRESS:3000
-   ```
-
-### Important Notes About Local Storage
-
-Since the app uses browser local storage:
-- Each device/browser will have its OWN copy of the data
-- Changes on one device WON'T sync to other devices automatically
-- For a true multi-device setup, you'd need to use one device as the "central" app
-
-**Recommendation**: Pick one device (like a family tablet or your computer) as the main app location and access it from that device only. Or, if you want multiple devices to access it, consider using a cloud backend in the future.
-
-## How to Use
-
-### Switching Between Parent and Kid View
-
-- Click the **"Kid View"** / **"Parent View"** button in the top-right corner
-- **Kid View**: Simplified interface where kids select their profile and see their tasks/rewards
-- **Parent View**: Full admin interface with all tabs (Dashboard, Kids, Tasks, Rewards, Screen Time, Statistics)
-
-### Parent View
-
-#### 1. Add Kids
-- Click the "Kids" tab
-- Click "Add Kid" button
-- Enter name, age, choose an avatar emoji and color
-- Click "Add Kid" to save
-
-#### 2. Create Tasks
-- Click the "Tasks" tab
-- Click "Add Task" button
-- Fill in task details:
-  - Title (e.g., "Clean your room")
-  - Assign to a kid
-  - Set point value
-  - Choose category (chore, homework, behavior, extra)
-  - Choose if it's recurring (one-time, daily, or weekly)
-- Click "Add Task" to save
-
-#### 3. Manage Tasks on Dashboard
-- Go to the "Dashboard" tab
-- Each kid has their own card showing:
-  - Total points
-  - Pending tasks
-  - Completed tasks
-  - Streak indicator (fire emoji when they complete 3+ tasks today)
-- Click the green checkmark to approve/complete a task
-- Points are awarded instantly!
-- Click the red X to undo if needed
-
-#### 4. Set Up Rewards
-- Click the "Rewards" tab
-- Click "Add Reward" button
-- Enter reward details:
-  - Title (e.g., "Extra 30 min screen time")
-  - Points cost
-  - Choose an icon
-- Click "Add Reward" to save
-
-#### 5. Review Reward Suggestions from Kids
-- When kids suggest rewards (from Kid View), you'll see a yellow notification badge on the Rewards tab
-- Approve suggestions and set the point value, or deny them
-
-#### 6. Redeem Rewards
-- In the "Rewards" tab, scroll down to "Redeem Rewards"
-- Each kid shows which rewards they can afford
-- Click a reward button to redeem it
-- Points are deducted automatically
-
-#### 7. Screen Time Management
-- Click the "Screen Time" tab
-- Set the points-per-minute conversion rate (default: 2 points = 1 minute)
-- Kids can see their available screen time in both views
-- Redeem screen time for kids directly from this tab
-
-#### 8. View Statistics
-- Click the "Statistics" tab
-- See detailed stats for each kid:
-  - Total tasks, completed, pending
-  - Completion rate percentage
-  - Tasks completed this week
-  - Total points earned
-
-### Kid View
-
-1. **Select Your Profile**: Click on your avatar/name
-2. **See Your Dashboard**:
-   - View your total points
-   - See available screen time (calculated from points)
-   - Check how many tasks you completed today
-3. **View Your Tasks**: See all pending tasks with point values
-4. **Check Available Rewards**: See which rewards you can afford
-5. **Suggest Rewards**: Click "Suggest a Reward" button to request new rewards from parents
-
-## Tips for Parents
-
-### Suggested Point Values
-- **Simple daily tasks** (5-10 points): Make bed, brush teeth, put dishes in sink
-- **Regular chores** (10-25 points): Clean room, do homework, feed pets
-- **Bigger tasks** (25-50 points): Mow lawn, deep clean, help with dinner
-- **Extra credit** (50-100 points): Exceptional behavior, going above and beyond
-
-### Suggested Rewards
-- **Small rewards** (25-50 points): Extra dessert, choose dinner, 30 min extra screen time
-- **Medium rewards** (75-150 points): Movie night pick, sleepover, special outing
-- **Big rewards** (200+ points): New toy, day trip, special privilege
-
-### Screen Time Conversion Examples
-- **2 points/minute** (default): 60 points = 30 minutes
-- **1 point/minute** (generous): 30 points = 30 minutes
-- **3 points/minute** (stricter): 90 points = 30 minutes
-
-### Best Practices
-1. **Be consistent**: Check the app daily to approve completed tasks
-2. **Make it visible**: Keep the app open on a family tablet or computer
-3. **Celebrate wins**: Make a big deal when kids redeem rewards
-4. **Adjust as needed**: Change point values if tasks are too easy or hard
-5. **Use recurring tasks**: Set daily chores (make bed, brush teeth) to daily recurring
-6. **Review suggestions**: Check reward suggestions regularly and discuss with kids
-
-## Data Storage
-
-All data is stored in your browser's local storage. This means:
-- No internet connection required after initial load
-- Data persists even when you close the browser
-- Data is specific to this browser on this computer
-- To clear all data, clear your browser's cache/local storage
-
-**Note**: If you access the app from multiple devices, each device will have separate data. For shared use, pick one primary device.
-
-## Building for Production
-
-To create a production-ready version:
-
-```
-npm run build
+# Start development server
+npm run dev
 ```
 
-This creates an optimized version in the `dist` folder that you can:
-- Host on a web server
-- Deploy to services like Vercel, Netlify, or GitHub Pages
-- Run locally by opening `dist/index.html`
+Open http://localhost:5173
 
-## Troubleshooting
+### Docker Production Mode
 
-**App won't start:**
-- Make sure Node.js is installed
-- Delete `node_modules` folder and run `npm install` again
+```bash
+# Build and run
+docker compose build
+docker compose up -d
+```
 
-**Can't access from other devices:**
-- Make sure both devices are on the same WiFi network
-- Check your firewall settings (may need to allow port 5173)
-- Try disabling VPN if you have one running
+Open http://localhost:3000
 
-**Data disappeared:**
-- Check if you're using the same browser
-- Browser cache might have been cleared
+## 📱 Progressive Web App
 
-**Changes not showing:**
-- Hard refresh the page (Ctrl + F5 on Windows)
-- Clear browser cache
+Install as an app on any device:
 
-## Smart Light Integration
+- **Desktop:** Look for install icon (⊕) in browser address bar
+- **Mobile:** Browser menu → "Add to Home Screen"
 
-Connect RGB lights to show each kid's task status at a glance!
+Works offline, sends notifications, feels like a native app!
 
-### Supported Systems
-- **Home Assistant**: Any RGB light connected to Home Assistant
-- **WLED**: Direct control of WLED-powered LED strips
+## 🔐 Security
 
-### Traffic Light System
-- 🟢 **GREEN**: All tasks complete!
-- 🟡 **YELLOW**: 1-2 tasks remaining
-- 🔴 **RED**: 3+ tasks pending
+- Password protection with SHA-256 hashing
+- Session management (24-hour timeout)
+- Browser-based storage (localStorage/IndexedDB)
+- No data sent to external servers
 
-### Quick Start
-1. Install dependencies: `npm install`
-2. Start the app: `npm run dev -- --host`
-3. Go to the **Smart Lights** tab in Parent View
-4. Click **Add Light Integration**
-5. Choose Home Assistant or WLED
-6. Enter connection details and test
-7. Lights auto-update when tasks change!
+## 🏠 Smart Home Integration
 
-**For detailed setup instructions**, see [SMART_LIGHTS_SETUP.md](SMART_LIGHTS_SETUP.md)
+Connect to your smart lights to show task status:
 
-### Example Hardware Setups
-- **Budget**: ESP8266 + WLED + LED strip (~$10-15)
-- **Premium**: Philips Hue bulbs via Home Assistant (~$20-50/bulb)
-- **Recommended**: ESP32 + WLED + LED diffuser tube (~$20-25)
+- **Home Assistant** - Any light entity via REST API
+- **WLED** - LED strips via JSON API
+- **Traffic Light Colors:**
+  - 🟢 Green = All tasks done
+  - 🟡 Yellow = 1-2 tasks remaining
+  - 🔴 Red = 3+ tasks remaining
 
-The integration code is in `src/integrations.js` and the UI is in `src/IntegrationsManager.jsx`.
+See [SMART_LIGHTS_SETUP.md](SMART_LIGHTS_SETUP.md) for configuration.
 
-## Future Enhancement Ideas
+## 🐳 Docker Deployment
 
-Want to add more features? Here are some ideas:
-- Password protection for parent mode
-- Photo verification for tasks
-- Export data to CSV
-- Cloud sync across devices (Firebase)
-- Mobile app version (PWA)
-- Task scheduling/reminders with notifications
-- Automatic recurring task reset (daily/weekly)
-- Points history and transaction log
-- Family leaderboard mode
-- Multiple smart light effects (pulse, rainbow, etc.)
+### Linux Server
 
-## Technical Details
+```bash
+git clone https://github.com/YOUR-USERNAME/family-task-tracker.git
+cd family-task-tracker
+docker compose build
+docker compose up -d
+```
 
-**Built with:**
-- React 18 (UI framework)
-- Vite (build tool)
-- TailwindCSS (styling)
-- Lucide React (icons)
-- Local Storage (data persistence)
+Access from any device on your network: `http://SERVER-IP:3000`
 
-**Features:**
-- Fully responsive design (works on phones, tablets, computers)
-- Real-time updates
-- Persistent data storage
-- No backend required
-- Offline-capable
+See [LINUX_DEPLOYMENT.md](LINUX_DEPLOYMENT.md) for complete guide.
 
-## License
+## 📊 Data Management
 
-Free to use and modify for your family!
+### Automatic Backups
+- Enable in Admin → Backup & Restore
+- Scheduled intervals: 6h, 12h, 24h, 48h, or weekly
+- Stored in browser's IndexedDB
+
+### Manual Backup/Restore
+- Export → Download .json file
+- Import → Upload .json file
+- Share data between devices
+
+### Data Migration
+- Automatic version migration on updates
+- Pre-migration backups created automatically
+- Backward compatible
+
+## 🎯 Module System
+
+Toggle features on/off in Admin panel:
+
+- Screen Time Manager
+- Statistics Dashboard
+- Smart Light Integration
+- Backup & Restore
+- Deadline Reminders
+- Streak Tracking
+- Recurring Tasks
+- Kid View Mode
+
+## 🌐 Network Access
+
+### Development Server
+```bash
+npm run dev -- --host
+```
+
+### Docker (automatic)
+Access from any device on your network using your computer's IP address.
+
+### Firewall Setup
+
+**Windows:**
+```powershell
+# Allow port 3000
+netsh advfirewall firewall add rule name="Family Tasks" dir=in action=allow protocol=TCP localport=3000
+```
+
+**Linux:**
+```bash
+sudo ufw allow 3000/tcp
+```
+
+## 📚 Documentation
+
+- [GETTING_STARTED.md](GETTING_STARTED.md) - First-time setup guide
+- [DEPLOYMENT_READY.md](DEPLOYMENT_READY.md) - Complete feature overview
+- [DOCKER_SETUP.md](DOCKER_SETUP.md) - Docker deployment guide
+- [LINUX_DEPLOYMENT.md](LINUX_DEPLOYMENT.md) - Linux server setup
+- [SMART_LIGHTS_SETUP.md](SMART_LIGHTS_SETUP.md) - Smart home integration
+- [TROUBLESHOOTING_CHECKLIST.md](TROUBLESHOOTING_CHECKLIST.md) - Common issues
+
+## 🛠️ Tech Stack
+
+- **Frontend:** React 18, Vite
+- **Styling:** TailwindCSS
+- **Icons:** Lucide React
+- **Storage:** Browser localStorage + IndexedDB
+- **PWA:** Service Worker + Web App Manifest
+- **Deployment:** Docker + Nginx
+- **Smart Home:** Home Assistant API, WLED API
+
+## 📝 Usage
+
+### 1. Add Family Members
+- Go to Family tab
+- Add members with roles (Child, Parent, Teen, Other)
+- Customize avatar and color
+
+### 2. Create Tasks
+- Go to Tasks tab
+- Create tasks with points value
+- Assign to family members
+- Optional: Set deadlines for reminders
+
+### 3. Set Up Rewards
+- Go to Rewards tab
+- Create rewards with point cost
+- Kids can suggest new rewards
+
+### 4. Configure Features
+- Go to Admin tab
+- Set up password protection
+- Enable/disable modules
+- Configure smart lights
+- Set up automatic backups
+
+## 🔄 Updates
+
+### Pull Latest Changes
+```bash
+git pull
+npm install
+docker compose down
+docker compose build --no-cache
+docker compose up -d
+```
+
+## 🤝 Contributing
+
+This is a personal family project, but feel free to fork and customize for your own family!
+
+## 📄 License
+
+MIT License - Use freely for personal or commercial projects
+
+## 🎯 Roadmap
+
+### Planned Features (Phase 2)
+- [ ] Task Pool System - Central tasks anyone can claim
+- [ ] Enhanced Recurring Tasks - Daily/Weekly/Monthly with auto-reset
+- [ ] Claim/Unclaim System - Self-service task selection
+- [ ] Task Categories and Filtering
+- [ ] Mobile-optimized UI improvements
+
+## 🐛 Issues & Support
+
+For issues or questions, please check:
+1. [TROUBLESHOOTING_CHECKLIST.md](TROUBLESHOOTING_CHECKLIST.md)
+2. Browser console (F12) for errors
+3. Docker logs: `docker compose logs`
+
+## ⭐ Acknowledgments
+
+Built with:
+- React + Vite
+- TailwindCSS
+- Lucide Icons
+- Home Assistant
+- WLED
 
 ---
 
-Made with love for awesome parents and kids!
-#   f a m i l y - t a s k - t r a c k e r  
- 
+**Made with ❤️ for families who want to make chores more fun!**

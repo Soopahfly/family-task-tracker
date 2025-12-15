@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Users, Trophy, ListTodo, Plus, Star, Check, X, Gift, TrendingUp, Clock, Lightbulb, Timer, BarChart3, Calendar, Flame, Eye, EyeOff, Zap, Settings, Database, Bell, Lock, LogOut } from 'lucide-react'
+import { Users, Trophy, ListTodo, Plus, Star, Check, X, Gift, TrendingUp, Clock, Lightbulb, Timer, BarChart3, Calendar, Flame, Eye, EyeOff, Zap, Settings, Database, Bell, Lock, LogOut, Layers } from 'lucide-react'
 
 // Import new components
 import AdminSettings from './components/AdminSettings'
@@ -7,6 +7,8 @@ import BackupManager from './components/BackupManager'
 import DeadlineManager from './components/DeadlineManager'
 import IntegrationsManager from './IntegrationsManager'
 import PasswordLogin from './components/PasswordLogin'
+import TaskPool from './components/TaskPool'
+import EnhancedDashboard from './components/EnhancedDashboard'
 import { getDefaultModuleStates } from './modules/moduleConfig'
 import { formatDeadline, getDeadlineColor } from './utils/notificationManager'
 import { isPasswordSet, verifyPassword, isSessionValid, logoutSession } from './utils/authManager'
@@ -151,16 +153,22 @@ function App() {
             <Navigation activeView={activeView} setActiveView={setActiveView} rewardSuggestions={rewardSuggestions} moduleStates={moduleStates} />
 
             {activeView === 'dashboard' && (
-              <Dashboard
+              <EnhancedDashboard
                 familyMembers={familyMembers}
                 tasks={tasks}
                 setTasks={setTasks}
-                rewards={rewards}
                 setFamilyMembers={setFamilyMembers}
               />
             )}
             {activeView === 'familyMembers' && (
               <KidsManagement familyMembers={familyMembers} setFamilyMembers={setFamilyMembers} tasks={tasks} />
+            )}
+            {activeView === 'taskPool' && (
+              <TaskPool
+                familyMembers={familyMembers}
+                tasks={tasks}
+                setTasks={setTasks}
+              />
             )}
             {activeView === 'tasks' && (
               <TaskManagement
@@ -283,6 +291,7 @@ function Navigation({ activeView, setActiveView, rewardSuggestions, moduleStates
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: TrendingUp },
     { id: 'familyMembers', label: 'Family', icon: Users },
+    { id: 'taskPool', label: 'Task Pool', icon: Layers },
     { id: 'tasks', label: 'Tasks', icon: ListTodo },
     { id: 'rewards', label: 'Rewards', icon: Trophy, badge: pendingSuggestions },
     // Conditional tabs based on module states
