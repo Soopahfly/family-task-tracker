@@ -1,7 +1,7 @@
 {
-  "name": "Kids Task Tracker",
-  "short_name": "Task Tracker",
-  "description": "Track kids' tasks, chores, and rewards with points system",
+  "name": "Family Task Tracker",
+  "short_name": "Family Tasks",
+  "description": "Track family tasks, chores, and rewards with points system",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#667eea",

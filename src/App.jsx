@@ -10,9 +10,10 @@ import PasswordLogin from './components/PasswordLogin'
 import { getDefaultModuleStates } from './modules/moduleConfig'
 import { formatDeadline, getDeadlineColor } from './utils/notificationManager'
 import { isPasswordSet, verifyPassword, isSessionValid, logoutSession } from './utils/authManager'
+import { runMigrations, needsMigration } from './utils/dataMigration'
 
 function App() {
-  const [kids, setKids] = useState([])
+  const [familyMembers, setFamilyMembers] = useState([])
   const [tasks, setTasks] = useState([])
   const [rewards, setRewards] = useState([])
   const [rewardSuggestions, setRewardSuggestions] = useState([])
@@ -36,16 +37,31 @@ function App() {
   })
   const [showPasswordPrompt, setShowPasswordPrompt] = useState(false)
 
+  // Run data migration on first load
+  useEffect(() => {
+    if (needsMigration()) {
+      console.log('Data migration needed...')
+      const migrated = runMigrations()
+      if (migrated) {
+        console.log('✅ Data migrated successfully!')
+        // Show user a notification
+        setTimeout(() => {
+          alert('✅ App updated! Your data has been migrated to the new version.')
+        }, 500)
+      }
+    }
+  }, [])
+
   // Load data from localStorage
   useEffect(() => {
-    const savedKids = localStorage.getItem('kids')
+    const savedFamilyMembers = localStorage.getItem('familyMembers')
     const savedTasks = localStorage.getItem('tasks')
     const savedRewards = localStorage.getItem('rewards')
     const savedSuggestions = localStorage.getItem('rewardSuggestions')
     const savedSettings = localStorage.getItem('settings')
     const savedIntegrations = localStorage.getItem('integrations')
 
-    if (savedKids) setKids(JSON.parse(savedKids))
+    if (savedFamilyMembers) setFamilyMembers(JSON.parse(savedFamilyMembers))
     if (savedTasks) setTasks(JSON.parse(savedTasks))
     if (savedRewards) setRewards(JSON.parse(savedRewards))
     if (savedSuggestions) setRewardSuggestions(JSON.parse(savedSuggestions))
@@ -55,8 +71,8 @@ function App() {
 
   // Save data to localStorage
   useEffect(() => {
-    localStorage.setItem('kids', JSON.stringify(kids))
-  }, [kids])
+    localStorage.setItem('familyMembers', JSON.stringify(familyMembers))
+  }, [familyMembers])
 
   useEffect(() => {
     localStorage.setItem('tasks', JSON.stringify(tasks))
@@ -136,19 +152,19 @@ function App() {
 
             {activeView === 'dashboard' && (
               <Dashboard
-                kids={kids}
+                familyMembers={familyMembers}
                 tasks={tasks}
                 setTasks={setTasks}
                 rewards={rewards}
-                setKids={setKids}
+                setFamilyMembers={setFamilyMembers}
               />
             )}
-            {activeView === 'kids' && (
-              <KidsManagement kids={kids} setKids={setKids} tasks={tasks} />
+            {activeView === 'familyMembers' && (
+              <KidsManagement familyMembers={familyMembers} setFamilyMembers={setFamilyMembers} tasks={tasks} />
             )}
             {activeView === 'tasks' && (
               <TaskManagement
-                kids={kids}
+                familyMembers={familyMembers}
                 tasks={tasks}
                 setTasks={setTasks}
               />
@@ -157,27 +173,27 @@ function App() {
               <RewardsManagement
                 rewards={rewards}
                 setRewards={setRewards}
-                kids={kids}
-                setKids={setKids}
+                familyMembers={familyMembers}
+                setFamilyMembers={setFamilyMembers}
                 rewardSuggestions={rewardSuggestions}
                 setRewardSuggestions={setRewardSuggestions}
               />
             )}
             {activeView === 'screentime' && (
               <ScreenTimeManager
-                kids={kids}
-                setKids={setKids}
+                familyMembers={familyMembers}
+                setFamilyMembers={setFamilyMembers}
                 settings={settings}
                 setSettings={setSettings}
               />
             )}
             {activeView === 'stats' && (
-              <Statistics kids={kids} tasks={tasks} />
+              <Statistics familyMembers={familyMembers} tasks={tasks} />
             )}
 
             {activeView === 'integrations' && (
               <IntegrationsManager
-                kids={kids}
+                familyMembers={familyMembers}
                 tasks={tasks}
                 integrations={integrations}
                 setIntegrations={setIntegrations}
@@ -191,7 +207,7 @@ function App() {
             {activeView === 'deadlines' && (
               <DeadlineManager
                 tasks={tasks}
-                kids={kids}
+                familyMembers={familyMembers}
               />
             )}
 
@@ -204,7 +220,7 @@ function App() {
           </>
         ) : (
           <KidView
-            kids={kids}
+            familyMembers={familyMembers}
             tasks={tasks}
             setTasks={setTasks}
             rewards={rewards}
@@ -238,7 +254,7 @@ function Header({ viewMode, setViewMode, onLogout, isPasswordProtected }) {
         </div>
         <h1 className="text-5xl font-bold text-white flex items-center gap-3">
           <Star className="text-yellow-300" size={48} />
-          Kids Task Tracker
+          Family Task Tracker
           <Star className="text-yellow-300" size={48} />
         </h1>
         <button
@@ -266,7 +282,7 @@ function Navigation({ activeView, setActiveView, rewardSuggestions, moduleStates
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: TrendingUp },
-    { id: 'kids', label: 'Kids', icon: Users },
+    { id: 'familyMembers', label: 'Family', icon: Users },
     { id: 'tasks', label: 'Tasks', icon: ListTodo },
     { id: 'rewards', label: 'Rewards', icon: Trophy, badge: pendingSuggestions },
     // Conditional tabs based on module states
@@ -304,16 +320,16 @@ function Navigation({ activeView, setActiveView, rewardSuggestions, moduleStates
   )
 }
 
-function KidView({ kids, tasks, setTasks, rewards, rewardSuggestions, setRewardSuggestions, selectedKid, setSelectedKid, settings }) {
+function KidView({ familyMembers, tasks, setTasks, rewards, rewardSuggestions, setRewardSuggestions, selectedKid, setSelectedKid, settings }) {
   const [showSuggestionForm, setShowSuggestionForm] = useState(false)
   const [suggestionTitle, setSuggestionTitle] = useState('')
 
-  if (!selectedKid && kids.length > 0) {
+  if (!selectedKid && familyMembers.length > 0) {
     return (
       <div className="bg-white rounded-2xl p-8">
         <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">Who are you?</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {kids.map(kid => (
+          {familyMembers.map(kid => (
             <button
               key={kid.id}
               onClick={() => setSelectedKid(kid)}
@@ -337,7 +353,7 @@ function KidView({ kids, tasks, setTasks, rewards, rewardSuggestions, setRewardS
     return (
       <div className="bg-white rounded-2xl p-8 text-center">
         <Users size={64} className="mx-auto text-gray-300 mb-4" />
-        <p className="text-gray-500">No kids added yet. Ask a parent to add you!</p>
+        <p className="text-gray-500">No family members added yet. Ask a parent to add you!</p>
       </div>
     )
   }
@@ -524,7 +540,7 @@ function KidView({ kids, tasks, setTasks, rewards, rewardSuggestions, setRewardS
   )
 }
 
-function Dashboard({ kids, tasks, setTasks, rewards, setKids }) {
+function Dashboard({ familyMembers, tasks, setTasks, rewards, setFamilyMembers }) {
   const handleCompleteTask = (taskId, kidId) => {
     const task = tasks.find(t => t.id === taskId)
     if (!task) return
@@ -537,7 +553,7 @@ function Dashboard({ kids, tasks, setTasks, rewards, setKids }) {
     setTasks(updatedTasks)
 
     // Award points and update streak
-    setKids(kids.map(k => {
+    setFamilyMembers(familyMembers.map(k => {
       if (k.id === kidId) {
         const newPoints = (k.points || 0) + task.points
         // Check for streak
@@ -564,18 +580,18 @@ function Dashboard({ kids, tasks, setTasks, rewards, setKids }) {
         : t
     ))
 
-    setKids(kids.map(k =>
+    setFamilyMembers(familyMembers.map(k =>
       k.id === kidId
         ? { ...k, points: Math.max(0, (k.points || 0) - task.points) }
         : k
     ))
   }
 
-  if (kids.length === 0) {
+  if (familyMembers.length === 0) {
     return (
       <div className="bg-white rounded-2xl p-8 text-center">
         <Users size={64} className="mx-auto text-gray-300 mb-4" />
-        <h2 className="text-2xl font-bold text-gray-700 mb-2">No Kids Added Yet</h2>
+        <h2 className="text-2xl font-bold text-gray-700 mb-2">No family members added yet</h2>
         <p className="text-gray-500 mb-4">Get started by adding your first kid profile!</p>
       </div>
     )
@@ -584,7 +600,7 @@ function Dashboard({ kids, tasks, setTasks, rewards, setKids }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {kids.map(kid => (
+        {familyMembers.map(kid => (
           <KidCard
             key={kid.id}
             kid={kid}
@@ -702,9 +718,9 @@ function KidCard({ kid, tasks, onCompleteTask, onUncompleteTask }) {
   )
 }
 
-function KidsManagement({ kids, setKids, tasks }) {
+function KidsManagement({ familyMembers, setFamilyMembers, tasks }) {
   const [showForm, setShowForm] = useState(false)
-  const [formData, setFormData] = useState({ name: '', age: '', color: '#FF6B6B', avatar: '' })
+  const [formData, setFormData] = useState({ name: '', age: '', color: '#FF6B6B', avatar: '', role: 'child' })
 
   const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2']
 
@@ -716,30 +732,31 @@ function KidsManagement({ kids, setKids, tasks }) {
       age: parseInt(formData.age),
       color: formData.color,
       avatar: formData.avatar,
+      role: formData.role,
       points: 0,
       createdAt: new Date().toISOString()
     }
-    setKids([...kids, newKid])
-    setFormData({ name: '', age: '', color: '#FF6B6B', avatar: '' })
+    setFamilyMembers([...familyMembers, newKid])
+    setFormData({ name: '', age: '', color: '#FF6B6B', avatar: '', role: 'child' })
     setShowForm(false)
   }
 
   const handleDelete = (kidId) => {
     if (confirm('Are you sure you want to remove this kid? All their tasks will also be removed.')) {
-      setKids(kids.filter(k => k.id !== kidId))
+      setFamilyMembers(familyMembers.filter(k => k.id !== kidId))
     }
   }
 
   return (
     <div className="bg-white rounded-2xl p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Manage Kids</h2>
+        <h2 className="text-2xl font-bold text-gray-800">Manage Family</h2>
         <button
           onClick={() => setShowForm(!showForm)}
           className="bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-700 flex items-center gap-2"
         >
           <Plus size={20} />
-          Add Kid
+          Add Member
         </button>
       </div>
 
@@ -785,6 +802,33 @@ function KidsManagement({ kids, setKids, tasks }) {
           </div>
 
           <div className="mb-4">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Role</label>
+            <div className="grid grid-cols-4 gap-2">
+              {['child', 'parent', 'teen', 'other'].map(roleType => (
+                <button
+                  key={roleType}
+                  type="button"
+                  onClick={() => setFormData({...formData, role: roleType})}
+                  className={`p-3 rounded-lg border-2 transition-all ${
+                    formData.role === roleType
+                      ? 'border-purple-600 bg-purple-50'
+                      : 'border-gray-300 hover:border-purple-300'
+                  }`}
+                >
+                  <div className="text-2xl mb-1">
+                    {roleType === 'child' ? '👧' :
+                     roleType === 'parent' ? '👨' :
+                     roleType === 'teen' ? '🧑' : '👤'}
+                  </div>
+                  <div className="text-xs font-semibold capitalize">
+                    {roleType}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mb-4">
             <label className="block text-sm font-semibold text-gray-700 mb-2">Color</label>
             <div className="flex gap-2 flex-wrap">
               {colors.map(color => (
@@ -806,7 +850,7 @@ function KidsManagement({ kids, setKids, tasks }) {
               type="submit"
               className="bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700"
             >
-              Add Kid
+              Add Member
             </button>
             <button
               type="button"
@@ -820,7 +864,7 @@ function KidsManagement({ kids, setKids, tasks }) {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {kids.map(kid => {
+        {familyMembers.map(kid => {
           const kidTasks = tasks.filter(t => t.kidId === kid.id)
           const completedCount = kidTasks.filter(t => t.completed).length
 
@@ -836,7 +880,19 @@ function KidsManagement({ kids, setKids, tasks }) {
                   </div>
                   <div>
                     <h3 className="font-bold text-gray-800">{kid.name}</h3>
-                    <p className="text-sm text-gray-500">Age {kid.age}</p>
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
+                        kid.role === 'child' ? 'bg-blue-100 text-blue-800' :
+                        kid.role === 'parent' ? 'bg-purple-100 text-purple-800' :
+                        kid.role === 'teen' ? 'bg-green-100 text-green-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {kid.role === 'child' ? '👧 Child' :
+                         kid.role === 'parent' ? '👨 Parent' :
+                         kid.role === 'teen' ? '🧑 Teen' : '👤 Other'}
+                      </span>
+                      <p className="text-sm text-gray-500">Age {kid.age}</p>
+                    </div>
                   </div>
                 </div>
                 <button
@@ -858,17 +914,17 @@ function KidsManagement({ kids, setKids, tasks }) {
         })}
       </div>
 
-      {kids.length === 0 && !showForm && (
+      {familyMembers.length === 0 && !showForm && (
         <div className="text-center py-12 text-gray-400">
           <Users size={64} className="mx-auto mb-4 opacity-50" />
-          <p>No kids added yet. Click "Add Kid" to get started!</p>
+          <p>No family members added yet. Click "Add Member" to get started!</p>
         </div>
       )}
     </div>
   )
 }
 
-function TaskManagement({ kids, tasks, setTasks }) {
+function TaskManagement({ familyMembers, tasks, setTasks }) {
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
@@ -952,7 +1008,7 @@ function TaskManagement({ kids, tasks, setTasks }) {
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="">Select a kid</option>
-                {kids.map(kid => (
+                {familyMembers.map(kid => (
                   <option key={kid.id} value={kid.id}>{kid.name}</option>
                 ))}
               </select>
@@ -1039,7 +1095,7 @@ function TaskManagement({ kids, tasks, setTasks }) {
           </div>
         ) : (
           tasks.map(task => {
-            const kid = kids.find(k => k.id === task.kidId)
+            const kid = familyMembers.find(k => k.id === task.kidId)
             return (
               <div
                 key={task.id}
@@ -1098,7 +1154,7 @@ function TaskManagement({ kids, tasks, setTasks }) {
   )
 }
 
-function RewardsManagement({ rewards, setRewards, kids, setKids, rewardSuggestions, setRewardSuggestions }) {
+function RewardsManagement({ rewards, setRewards, familyMembers, setFamilyMembers, rewardSuggestions, setRewardSuggestions }) {
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
@@ -1136,7 +1192,7 @@ function RewardsManagement({ rewards, setRewards, kids, setKids, rewardSuggestio
     }
 
     if (confirm(`Redeem "${reward.title}" for ${kid.name}? This will deduct ${reward.pointsCost} points.`)) {
-      setKids(kids.map(k =>
+      setFamilyMembers(familyMembers.map(k =>
         k.id === kid.id
           ? { ...k, points: k.points - reward.pointsCost }
           : k
@@ -1192,7 +1248,7 @@ function RewardsManagement({ rewards, setRewards, kids, setKids, rewardSuggestio
         <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-4 mb-6">
           <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
             <Lightbulb className="text-yellow-600" size={20} />
-            Reward Suggestions from Kids ({pendingSuggestions.length})
+            Reward Suggestions from familyMembers ({pendingSuggestions.length})
           </h3>
           <div className="space-y-2">
             {pendingSuggestions.map(suggestion => (
@@ -1328,11 +1384,11 @@ function RewardsManagement({ rewards, setRewards, kids, setKids, rewardSuggestio
       ) : (
         <div>
           <h3 className="text-xl font-bold text-gray-800 mb-4">Redeem Rewards</h3>
-          {kids.length === 0 ? (
-            <p className="text-gray-500 italic">Add kids first to redeem rewards</p>
+          {familyMembers.length === 0 ? (
+            <p className="text-gray-500 italic">Add familyMembers first to redeem rewards</p>
           ) : (
             <div className="space-y-4">
-              {kids.map(kid => (
+              {familyMembers.map(kid => (
                 <div key={kid.id} className="border-2 border-gray-200 rounded-xl p-4">
                   <div className="flex items-center gap-3 mb-4">
                     <div
@@ -1375,7 +1431,7 @@ function RewardsManagement({ rewards, setRewards, kids, setKids, rewardSuggestio
   )
 }
 
-function ScreenTimeManager({ kids, setKids, settings, setSettings }) {
+function ScreenTimeManager({ familyMembers, setFamilyMembers, settings, setSettings }) {
   const [selectedKid, setSelectedKid] = useState(null)
   const [minutesToRedeem, setMinutesToRedeem] = useState(30)
 
@@ -1388,7 +1444,7 @@ function ScreenTimeManager({ kids, setKids, settings, setSettings }) {
     }
 
     if (confirm(`Redeem ${minutesToRedeem} minutes of screen time for ${kid.name}? This will cost ${pointsCost} points.`)) {
-      setKids(kids.map(k =>
+      setFamilyMembers(familyMembers.map(k =>
         k.id === kid.id
           ? { ...k, points: k.points - pointsCost, screenTimeUsed: (k.screenTimeUsed || 0) + minutesToRedeem }
           : k
@@ -1449,10 +1505,10 @@ function ScreenTimeManager({ kids, setKids, settings, setSettings }) {
       </div>
 
       <div className="space-y-4">
-        {kids.length === 0 ? (
-          <p className="text-gray-400 italic text-center py-8">No kids added yet</p>
+        {familyMembers.length === 0 ? (
+          <p className="text-gray-400 italic text-center py-8">No family members added yet</p>
         ) : (
-          kids.map(kid => {
+          familyMembers.map(kid => {
             const pointsCost = minutesToRedeem * settings.pointsPerMinute
             const canAfford = kid.points >= pointsCost
             const availableMinutes = Math.floor(kid.points / settings.pointsPerMinute)
@@ -1496,7 +1552,7 @@ function ScreenTimeManager({ kids, setKids, settings, setSettings }) {
   )
 }
 
-function Statistics({ kids, tasks }) {
+function Statistics({ familyMembers, tasks }) {
   const getKidStats = (kid) => {
     const kidTasks = tasks.filter(t => t.kidId === kid.id)
     const completed = kidTasks.filter(t => t.completed)
@@ -1527,11 +1583,11 @@ function Statistics({ kids, tasks }) {
         Statistics & Progress
       </h2>
 
-      {kids.length === 0 ? (
-        <p className="text-gray-400 italic text-center py-8">No kids added yet</p>
+      {familyMembers.length === 0 ? (
+        <p className="text-gray-400 italic text-center py-8">No family members added yet</p>
       ) : (
         <div className="space-y-6">
-          {kids.map(kid => {
+          {familyMembers.map(kid => {
             const stats = getKidStats(kid)
 
             return (
