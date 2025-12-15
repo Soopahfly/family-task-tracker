@@ -36,7 +36,7 @@ A modern, full-featured family task management system with roles, points, reward
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR-USERNAME/family-task-tracker.git
+git clone https://github.com/Soopahfly/family-task-tracker.git
 cd family-task-tracker
 
 # Install dependencies
@@ -54,7 +54,7 @@ Open http://localhost:5173
 
 ```bash
 # Pull and run pre-built image
-docker run -d -p 3000:80 --name family-task-tracker \
+docker run -d -p 5173:80 --name family-task-tracker \
   ghcr.io/soopahfly/family-task-tracker:latest
 ```
 
@@ -66,7 +66,7 @@ docker compose build
 docker compose up -d
 ```
 
-Open http://localhost:3000
+Open http://localhost:5173
 
 See [PREBUILT_DOCKER.md](PREBUILT_DOCKER.md) for more deployment options.
 
@@ -110,7 +110,7 @@ docker compose build
 docker compose up -d
 ```
 
-Access from any device on your network: `http://SERVER-IP:3000`
+Access from any device on your network: `http://SERVER-IP:5173`
 
 See [LINUX_DEPLOYMENT.md](LINUX_DEPLOYMENT.md) for complete guide.
 
@@ -158,13 +158,13 @@ Access from any device on your network using your computer's IP address.
 
 **Windows:**
 ```powershell
-# Allow port 3000
-netsh advfirewall firewall add rule name="Family Tasks" dir=in action=allow protocol=TCP localport=3000
+# Allow port 5173
+netsh advfirewall firewall add rule name="Family Tasks" dir=in action=allow protocol=TCP localport=5173
 ```
 
 **Linux:**
 ```bash
-sudo ufw allow 3000/tcp
+sudo ufw allow 5173/tcp
 ```
 
 ## 📚 Documentation
