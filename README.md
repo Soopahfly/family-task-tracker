@@ -50,6 +50,16 @@ Open http://localhost:5173
 
 ### Docker Production Mode
 
+**Option 1: Pre-Built Image (Fastest - No Build Required!)**
+
+```bash
+# Pull and run pre-built image
+docker run -d -p 3000:80 --name family-task-tracker \
+  ghcr.io/soopahfly/family-task-tracker:latest
+```
+
+**Option 2: Build Locally**
+
 ```bash
 # Build and run
 docker compose build
@@ -57,6 +67,8 @@ docker compose up -d
 ```
 
 Open http://localhost:3000
+
+See [PREBUILT_DOCKER.md](PREBUILT_DOCKER.md) for more deployment options.
 
 ## 📱 Progressive Web App
 
