@@ -104,7 +104,7 @@ See [SMART_LIGHTS_SETUP.md](SMART_LIGHTS_SETUP.md) for configuration.
 ### Linux Server
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/family-task-tracker.git
+git clone https://github.com/Soopahfly/family-task-tracker.git
 cd family-task-tracker
 docker compose build
 docker compose up -d
