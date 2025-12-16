@@ -1,4 +1,5 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// In production, API is served from same origin. In dev, proxy handles /api requests.
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 async function apiCall(endpoint, options = {}) {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
