@@ -17,6 +17,7 @@ db.exec(`
     name TEXT NOT NULL,
     role TEXT NOT NULL,
     age INTEGER NOT NULL,
+    date_of_birth TEXT,
     points INTEGER DEFAULT 0,
     avatar TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -81,6 +82,14 @@ db.exec(`
     enabled INTEGER DEFAULT 1
   );
 `);
+
+// Migration: Add date_of_birth column if it doesn't exist
+try {
+  db.exec(`ALTER TABLE family_members ADD COLUMN date_of_birth TEXT`);
+  console.log('✅ Migration: Added date_of_birth column');
+} catch (e) {
+  // Column already exists
+}
 
 console.log('✅ Database initialized');
 

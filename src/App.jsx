@@ -738,16 +738,31 @@ function KidCard({ kid, tasks, onCompleteTask, onUncompleteTask }) {
 
 function KidsManagement({ familyMembers, setFamilyMembers, tasks }) {
   const [showForm, setShowForm] = useState(false)
-  const [formData, setFormData] = useState({ name: '', age: '', color: '#FF6B6B', avatar: '', role: 'child' })
+  const [formData, setFormData] = useState({ name: '', age: '', date_of_birth: '', useDateOfBirth: false, color: '#FF6B6B', avatar: '', role: 'child' })
 
   const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2']
 
+  const calculateAge = (dateOfBirth) => {
+    if (!dateOfBirth) return null;
+    const today = new Date();
+    const birthDate = new Date(dateOfBirth);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
+    const calculatedAge = formData.useDateOfBirth && formData.date_of_birth ? calculateAge(formData.date_of_birth) : parseInt(formData.age);
+
     const newKid = {
       id: Date.now().toString(),
       name: formData.name,
-      age: parseInt(formData.age),
+      age: calculatedAge,
+      date_of_birth: formData.useDateOfBirth ? formData.date_of_birth : null,
       color: formData.color,
       avatar: formData.avatar,
       role: formData.role,
@@ -758,7 +773,7 @@ function KidsManagement({ familyMembers, setFamilyMembers, tasks }) {
     try {
       await familyMembersAPI.create(newKid)
       setFamilyMembers([...familyMembers, newKid])
-      setFormData({ name: '', age: '', color: '#FF6B6B', avatar: '', role: 'child' })
+      setFormData({ name: '', age: '', date_of_birth: '', useDateOfBirth: false, color: '#FF6B6B', avatar: '', role: 'child' })
       setShowForm(false)
     } catch (error) {
       console.error('Failed to create family member:', error)
@@ -806,21 +821,52 @@ function KidsManagement({ familyMembers, setFamilyMembers, tasks }) {
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Age</label>
-              <input
-                type="number"
-                required
-                min="1"
-                max={formData.role === 'parent' || formData.role === 'other' ? "120" : "18"}
-                value={formData.age}
-                onChange={(e) => setFormData({...formData, age: e.target.value})}
-                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder={formData.role === 'parent' || formData.role === 'other' ? "Enter age" : "1-18"}
-              />
-              {formData.role === 'parent' || formData.role === 'other' ? (
-                <p className="text-xs text-gray-500 mt-1">Ages 1-120 allowed for {formData.role}s</p>
+              <div className="flex items-center gap-2 mb-2">
+                <label className="block text-sm font-semibold text-gray-700">Age</label>
+                <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.useDateOfBirth}
+                    onChange={(e) => setFormData({...formData, useDateOfBirth: e.target.checked})}
+                    className="rounded text-purple-600 focus:ring-purple-500"
+                  />
+                  <span>Use date of birth (auto-updates)</span>
+                </label>
+              </div>
+              {formData.useDateOfBirth ? (
+                <>
+                  <input
+                    type="date"
+                    required
+                    value={formData.date_of_birth}
+                    onChange={(e) => setFormData({...formData, date_of_birth: e.target.value})}
+                    max={new Date().toISOString().split('T')[0]}
+                    className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                  {formData.date_of_birth && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Age: {calculateAge(formData.date_of_birth)} years old
+                    </p>
+                  )}
+                </>
               ) : (
-                <p className="text-xs text-gray-500 mt-1">Ages 1-18 for children and teens</p>
+                <>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    max={formData.role === 'parent' || formData.role === 'other' ? "120" : "18"}
+                    value={formData.age}
+                    onChange={(e) => setFormData({...formData, age: e.target.value})}
+                    className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder={formData.role === 'parent' || formData.role === 'other' ? "Enter age" : "1-18"}
+                  />
+                  {formData.role === 'parent' || formData.role === 'other' ? (
+                    <p className="text-xs text-gray-500 mt-1">Ages 1-120 allowed for {formData.role}s</p>
+                  ) : (
+                    <p className="text-xs text-gray-500 mt-1">Ages 1-18 for children and teens</p>
+                  )}
+                </>
               )}
             </div>
           </div>

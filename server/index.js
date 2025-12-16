@@ -14,29 +14,50 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+// Helper function to calculate age from date of birth
+function calculateAge(dateOfBirth) {
+  if (!dateOfBirth) return null;
+  const today = new Date();
+  const birthDate = new Date(dateOfBirth);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+}
+
 // Family Members endpoints
 app.get('/api/family-members', (req, res) => {
   const members = db.prepare('SELECT * FROM family_members ORDER BY created_at').all();
+  // Calculate age from date_of_birth if available
+  members.forEach(member => {
+    if (member.date_of_birth) {
+      member.age = calculateAge(member.date_of_birth);
+    }
+  });
   res.json(members);
 });
 
 app.post('/api/family-members', (req, res) => {
-  const { id, name, role, age, points, avatar } = req.body;
+  const { id, name, role, age, date_of_birth, points, avatar } = req.body;
+  const calculatedAge = date_of_birth ? calculateAge(date_of_birth) : age;
   const stmt = db.prepare(
-    'INSERT INTO family_members (id, name, role, age, points, avatar) VALUES (?, ?, ?, ?, ?, ?)'
+    'INSERT INTO family_members (id, name, role, age, date_of_birth, points, avatar) VALUES (?, ?, ?, ?, ?, ?, ?)'
   );
-  stmt.run(id, name, role, age, points || 0, avatar || null);
-  res.json({ id, name, role, age, points, avatar });
+  stmt.run(id, name, role, calculatedAge, date_of_birth || null, points || 0, avatar || null);
+  res.json({ id, name, role, age: calculatedAge, date_of_birth, points, avatar });
 });
 
 app.put('/api/family-members/:id', (req, res) => {
   const { id } = req.params;
-  const { name, role, age, points, avatar } = req.body;
+  const { name, role, age, date_of_birth, points, avatar } = req.body;
+  const calculatedAge = date_of_birth ? calculateAge(date_of_birth) : age;
   const stmt = db.prepare(
-    'UPDATE family_members SET name = ?, role = ?, age = ?, points = ?, avatar = ? WHERE id = ?'
+    'UPDATE family_members SET name = ?, role = ?, age = ?, date_of_birth = ?, points = ?, avatar = ? WHERE id = ?'
   );
-  stmt.run(name, role, age, points, avatar, id);
-  res.json({ id, name, role, age, points, avatar });
+  stmt.run(name, role, calculatedAge, date_of_birth || null, points, avatar, id);
+  res.json({ id, name, role, age: calculatedAge, date_of_birth, points, avatar });
 });
 
 app.delete('/api/family-members/:id', (req, res) => {
