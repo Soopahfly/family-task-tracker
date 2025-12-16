@@ -5,7 +5,7 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const db = new Database(join(__dirname, 'data.db'));
+const db = new Database(join(__dirname, 'data', 'data.db'));
 
 // Enable foreign keys
 db.pragma('foreign_keys = ON');
