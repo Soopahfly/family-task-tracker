@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import crypto from 'crypto';
 import db from './db.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -206,6 +207,93 @@ app.put('/api/module-states', (req, res) => {
     stmt.run(module_name, enabled ? 1 : 0);
   }
   res.json(states);
+});
+
+// Password Authentication endpoints
+app.get('/api/auth/password-status', (req, res) => {
+  const password = db.prepare('SELECT value FROM settings WHERE key = ?').get('parentPassword');
+  res.json({ isSet: password !== undefined });
+});
+
+app.post('/api/auth/setup-password', (req, res) => {
+  const { password } = req.body;
+
+  if (!password || password.length < 4) {
+    return res.status(400).json({ success: false, error: 'Password must be at least 4 characters' });
+  }
+
+  // Check if password already exists
+  const existing = db.prepare('SELECT value FROM settings WHERE key = ?').get('parentPassword');
+  if (existing) {
+    return res.status(400).json({ success: false, error: 'Password already set' });
+  }
+
+  // Hash password
+  const hash = crypto.createHash('sha256').update(password).digest('hex');
+  db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run('parentPassword', hash);
+
+  res.json({ success: true });
+});
+
+app.post('/api/auth/verify-password', (req, res) => {
+  const { password } = req.body;
+
+  const stored = db.prepare('SELECT value FROM settings WHERE key = ?').get('parentPassword');
+  if (!stored) {
+    return res.status(400).json({ success: false, error: 'No password set' });
+  }
+
+  const hash = crypto.createHash('sha256').update(password).digest('hex');
+
+  if (hash === stored.value) {
+    const sessionToken = crypto.randomBytes(32).toString('hex');
+    res.json({ success: true, token: sessionToken });
+  } else {
+    res.status(401).json({ success: false, error: 'Incorrect password' });
+  }
+});
+
+app.post('/api/auth/change-password', (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  const stored = db.prepare('SELECT value FROM settings WHERE key = ?').get('parentPassword');
+  if (!stored) {
+    return res.status(400).json({ success: false, error: 'No password set' });
+  }
+
+  const currentHash = crypto.createHash('sha256').update(currentPassword).digest('hex');
+
+  if (currentHash !== stored.value) {
+    return res.status(401).json({ success: false, error: 'Current password is incorrect' });
+  }
+
+  if (!newPassword || newPassword.length < 4) {
+    return res.status(400).json({ success: false, error: 'New password must be at least 4 characters' });
+  }
+
+  const newHash = crypto.createHash('sha256').update(newPassword).digest('hex');
+  db.prepare('UPDATE settings SET value = ? WHERE key = ?').run(newHash, 'parentPassword');
+
+  res.json({ success: true });
+});
+
+app.post('/api/auth/remove-password', (req, res) => {
+  const { currentPassword } = req.body;
+
+  const stored = db.prepare('SELECT value FROM settings WHERE key = ?').get('parentPassword');
+  if (!stored) {
+    return res.status(400).json({ success: false, error: 'No password set' });
+  }
+
+  const hash = crypto.createHash('sha256').update(currentPassword).digest('hex');
+
+  if (hash !== stored.value) {
+    return res.status(401).json({ success: false, error: 'Incorrect password' });
+  }
+
+  db.prepare('DELETE FROM settings WHERE key = ?').run('parentPassword');
+
+  res.json({ success: true });
 });
 
 // Serve static files in production

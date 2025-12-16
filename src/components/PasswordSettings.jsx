@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Lock, Eye, EyeOff, Check, X, AlertCircle, Shield } from 'lucide-react'
 import {
   isPasswordSet,
+  loadPasswordStatus,
   setupPassword,
   changePassword,
   removePassword,
@@ -15,9 +16,13 @@ export default function PasswordSettings() {
   const [showPassword, setShowPassword] = useState(false)
   const [message, setMessage] = useState(null)
   const [isEditing, setIsEditing] = useState(false)
+  const [passwordExists, setPasswordExists] = useState(false)
 
-  const passwordExists = isPasswordSet()
   const passwordStrength = getPasswordStrength(newPassword)
+
+  useEffect(() => {
+    loadPasswordStatus().then(status => setPasswordExists(status))
+  }, [])
 
   const handleSetupPassword = async () => {
     if (newPassword !== confirmPassword) {
@@ -36,6 +41,7 @@ export default function PasswordSettings() {
       setNewPassword('')
       setConfirmPassword('')
       setIsEditing(false)
+      setPasswordExists(true)
       setTimeout(() => setMessage(null), 3000)
     } else {
       setMessage({ type: 'error', text: result.error })
@@ -71,6 +77,7 @@ export default function PasswordSettings() {
       setMessage({ type: 'success', text: 'Password protection removed' })
       setCurrentPassword('')
       setIsEditing(false)
+      setPasswordExists(false)
       setTimeout(() => setMessage(null), 3000)
     } else {
       setMessage({ type: 'error', text: result.error })

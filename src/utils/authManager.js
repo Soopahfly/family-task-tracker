@@ -1,16 +1,32 @@
 // Simple password authentication manager
-// For home use - stores hashed password in localStorage
+// For home use - stores hashed password in server database
+
+let passwordStatus = null;
 
 /**
- * Hash password using Web Crypto API
+ * Check if password is set up
  */
-async function hashPassword(password) {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(password)
-  const hash = await crypto.subtle.digest('SHA-256', data)
-  const hashArray = Array.from(new Uint8Array(hash))
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-  return hashHex
+export function isPasswordSet() {
+  // Use cached status if available
+  if (passwordStatus !== null) {
+    return passwordStatus;
+  }
+  return false;
+}
+
+/**
+ * Load password status from server
+ */
+export async function loadPasswordStatus() {
+  try {
+    const response = await fetch('/api/auth/password-status');
+    const data = await response.json();
+    passwordStatus = data.isSet;
+    return passwordStatus;
+  } catch (error) {
+    console.error('Failed to load password status:', error);
+    return false;
+  }
 }
 
 /**
@@ -21,41 +37,47 @@ export async function setupPassword(password) {
     return { success: false, error: 'Password must be at least 4 characters' }
   }
 
-  const hashedPassword = await hashPassword(password)
-  localStorage.setItem('parentPassword', hashedPassword)
+  try {
+    const response = await fetch('/api/auth/setup-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
 
-  return { success: true }
-}
+    const data = await response.json();
 
-/**
- * Check if password is set up
- */
-export function isPasswordSet() {
-  return localStorage.getItem('parentPassword') !== null
+    if (data.success) {
+      passwordStatus = true;
+    }
+
+    return data;
+  } catch (error) {
+    return { success: false, error: 'Failed to set password' };
+  }
 }
 
 /**
  * Verify password
  */
 export async function verifyPassword(password) {
-  const storedHash = localStorage.getItem('parentPassword')
+  try {
+    const response = await fetch('/api/auth/verify-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
 
-  if (!storedHash) {
-    // No password set yet
-    return { success: false, error: 'No password set' }
-  }
+    const data = await response.json();
 
-  const inputHash = await hashPassword(password)
+    if (data.success) {
+      // Create session token
+      sessionStorage.setItem('parentSession', data.token);
+      sessionStorage.setItem('sessionTimestamp', Date.now().toString());
+    }
 
-  if (inputHash === storedHash) {
-    // Create session token
-    const sessionToken = generateSessionToken()
-    sessionStorage.setItem('parentSession', sessionToken)
-    sessionStorage.setItem('sessionTimestamp', Date.now().toString())
-
-    return { success: true, token: sessionToken }
-  } else {
-    return { success: false, error: 'Incorrect password' }
+    return data;
+  } catch (error) {
+    return { success: false, error: 'Failed to verify password' };
   }
 }
 
@@ -94,38 +116,46 @@ export function logoutSession() {
  * Change password
  */
 export async function changePassword(currentPassword, newPassword) {
-  // Verify current password first
-  const verification = await verifyPassword(currentPassword)
-
-  if (!verification.success) {
-    return { success: false, error: 'Current password is incorrect' }
+  if (!newPassword || newPassword.length < 4) {
+    return { success: false, error: 'New password must be at least 4 characters' };
   }
 
-  // Set new password
-  return await setupPassword(newPassword)
+  try {
+    const response = await fetch('/api/auth/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentPassword, newPassword })
+    });
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return { success: false, error: 'Failed to change password' };
+  }
 }
 
 /**
  * Remove password protection (requires current password)
  */
 export async function removePassword(currentPassword) {
-  const verification = await verifyPassword(currentPassword)
+  try {
+    const response = await fetch('/api/auth/remove-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentPassword })
+    });
 
-  if (!verification.success) {
-    return { success: false, error: 'Incorrect password' }
+    const data = await response.json();
+
+    if (data.success) {
+      passwordStatus = false;
+      logoutSession();
+    }
+
+    return data;
+  } catch (error) {
+    return { success: false, error: 'Failed to remove password' };
   }
-
-  localStorage.removeItem('parentPassword')
-  logoutSession()
-
-  return { success: true }
-}
-
-/**
- * Generate random session token
- */
-function generateSessionToken() {
-  return Math.random().toString(36).substring(2) + Date.now().toString(36)
 }
 
 /**
