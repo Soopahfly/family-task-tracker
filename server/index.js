@@ -142,10 +142,14 @@ app.delete('/api/reward-suggestions/:id', (req, res) => {
 
 // Settings endpoints
 app.get('/api/settings', (req, res) => {
-  const settings = db.prepare('SELECT * FROM settings').all();
+  const settings = db.prepare('SELECT * FROM settings WHERE key != ?').all('parentPassword');
   const settingsObj = {};
   settings.forEach(s => {
-    settingsObj[s.key] = JSON.parse(s.value);
+    try {
+      settingsObj[s.key] = JSON.parse(s.value);
+    } catch (e) {
+      settingsObj[s.key] = s.value;
+    }
   });
   res.json(settingsObj);
 });
