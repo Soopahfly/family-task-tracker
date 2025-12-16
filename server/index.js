@@ -212,8 +212,8 @@ app.put('/api/module-states', (req, res) => {
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(join(__dirname, '../dist')));
 
-  // SPA fallback - must use a specific route pattern in Express 5
-  app.get('/:path(*)', (req, res) => {
+  // SPA fallback - send index.html for all non-API routes
+  app.get('*', (req, res) => {
     res.sendFile(join(__dirname, '../dist/index.html'));
   });
 }
