@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PWA Icon Generator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #667eea;
+    }
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      font-size: 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 10px 5px;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    canvas {
+      border: 2px solid #ddd;
+      margin: 20px 0;
+      border-radius: 10px;
+    }
+    .preview {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+    .icon-preview {
+      text-align: center;
+    }
+    .instructions {
+      background: #f0f0f0;
+      padding: 15px;
+      border-radius: 5px;
+      margin: 20px 0;
+    }
+    .success {
+      color: green;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📱 Family Task Tracker - PWA Icon Generator</h1>
+
+    <div class="instructions">
+      <h3>Instructions:</h3>
+      <ol>
+        <li>Click the buttons below to generate and download icons</li>
+        <li>Save the downloaded files to <code>public/</code> folder</li>
+        <li>Refresh your app to enable PWA install</li>
+      </ol>
+    </div>
+
+    <button onclick="generateIcon(192)">Generate 192x192 Icon</button>
+    <button onclick="generateIcon(512)">Generate 512x512 Icon</button>
+    <button onclick="generateIcon(96, 'icon-96.png')">Generate 96x96 Icon (Shortcuts)</button>
+    <button onclick="generateAllIcons()">✨ Generate All Icons (Recommended)</button>
+
+    <div class="preview" id="preview"></div>
+
+    <div id="status"></div>
+  </div>
+
+  <script>
+    function generateIcon(size, customFilename = null) {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+
+      // Background gradient (purple)
+      const gradient = ctx.createLinearGradient(0, 0, size, size);
+      gradient.addColorStop(0, '#667eea');
+      gradient.addColorStop(1, '#764ba2');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, size, size);
+
+      // White circle (checkmark background)
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.beginPath();
+      ctx.arc(size * 0.5, size * 0.4, size * 0.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Checkmark (purple)
+      ctx.strokeStyle = '#667eea';
+      ctx.lineWidth = size * 0.04;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(size * 0.42, size * 0.4);
+      ctx.lineTo(size * 0.48, size * 0.46);
+      ctx.lineTo(size * 0.58, size * 0.34);
+      ctx.stroke();
+
+      // Gold star (points indicator)
+      ctx.fillStyle = 'rgba(255, 215, 0, 0.9)';
+      ctx.beginPath();
+      ctx.arc(size * 0.75, size * 0.7, size * 0.1, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Star inner white points
+      ctx.fillStyle = 'white';
+      const starSize = size * 0.08;
+      const centerX = size * 0.75;
+      const centerY = size * 0.7;
+      ctx.beginPath();
+      for (let i = 0; i < 5; i++) {
+        const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
+        const x = centerX + Math.cos(angle) * starSize;
+        const y = centerY + Math.sin(angle) * starSize;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.fill();
+
+      // Family icons (3 small circles at bottom)
+      const familyY = size * 0.85;
+      const familyRadius = size * 0.04;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.beginPath();
+      ctx.arc(size * 0.3, familyY, familyRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(size * 0.5, familyY, familyRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(size * 0.7, familyY, familyRadius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Show preview
+      const preview = document.getElementById('preview');
+      const previewDiv = document.createElement('div');
+      previewDiv.className = 'icon-preview';
+      previewDiv.innerHTML = `
+        <h4>${size}x${size}</h4>
+        <canvas width="${Math.min(size, 200)}" height="${Math.min(size, 200)}"></canvas>
+      `;
+      const previewCanvas = previewDiv.querySelector('canvas');
+      const previewCtx = previewCanvas.getContext('2d');
+      previewCtx.drawImage(canvas, 0, 0, Math.min(size, 200), Math.min(size, 200));
+      preview.appendChild(previewDiv);
+
+      // Download
+      const filename = customFilename || `icon-${size}.png`;
+      canvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        document.getElementById('status').innerHTML =
+          `<p class="success">✅ Downloaded ${filename}</p>`;
+      }, 'image/png');
+    }
+
+    function generateBoth() {
+      document.getElementById('preview').innerHTML = '';
+      generateIcon(192);
+      setTimeout(() => generateIcon(512), 500);
+    }
+
+    function generateAllIcons() {
+      document.getElementById('preview').innerHTML = '';
+      document.getElementById('status').innerHTML = '<p>Generating all icons...</p>';
+
+      generateIcon(96, 'icon-96.png');
+      setTimeout(() => generateIcon(192), 500);
+      setTimeout(() => {
+        generateIcon(512);
+        document.getElementById('status').innerHTML =
+          '<p class="success">✅ All icons generated! Move them to the public/ folder.</p>';
+      }, 1000);
+    }
+  </script>
+</body>
+</html>

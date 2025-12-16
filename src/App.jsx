@@ -789,12 +789,17 @@ function KidsManagement({ familyMembers, setFamilyMembers, tasks }) {
                 type="number"
                 required
                 min="1"
-                max="18"
+                max={formData.role === 'parent' || formData.role === 'other' ? "120" : "18"}
                 value={formData.age}
                 onChange={(e) => setFormData({...formData, age: e.target.value})}
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="Enter age"
+                placeholder={formData.role === 'parent' || formData.role === 'other' ? "Enter age" : "1-18"}
               />
+              {formData.role === 'parent' || formData.role === 'other' ? (
+                <p className="text-xs text-gray-500 mt-1">Ages 1-120 allowed for {formData.role}s</p>
+              ) : (
+                <p className="text-xs text-gray-500 mt-1">Ages 1-18 for children and teens</p>
+              )}
             </div>
           </div>
 
