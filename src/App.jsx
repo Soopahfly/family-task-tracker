@@ -13,6 +13,7 @@ import { getDefaultModuleStates } from './modules/moduleConfig'
 import { formatDeadline, getDeadlineColor } from './utils/notificationManager'
 import { isPasswordSet, verifyPassword, isSessionValid, logoutSession } from './utils/authManager'
 import { runMigrations, needsMigration } from './utils/dataMigration'
+import { familyMembersAPI, tasksAPI, rewardsAPI, rewardSuggestionsAPI, settingsAPI, integrationsAPI, moduleStatesAPI } from './utils/api'
 
 function App() {
   const [familyMembers, setFamilyMembers] = useState([])
@@ -26,10 +27,8 @@ function App() {
   const [selectedKidView, setSelectedKidView] = useState(null)
 
   // Module state management - controls which features are enabled
-  const [moduleStates, setModuleStates] = useState(() => {
-    const saved = localStorage.getItem('moduleStates')
-    return saved ? JSON.parse(saved) : getDefaultModuleStates()
-  })
+  const [moduleStates, setModuleStates] = useState(getDefaultModuleStates())
+  const [loading, setLoading] = useState(true)
 
   // Authentication state
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -39,62 +38,37 @@ function App() {
   })
   const [showPasswordPrompt, setShowPasswordPrompt] = useState(false)
 
-  // Run data migration on first load
+  // Load all data from API on mount
   useEffect(() => {
-    if (needsMigration()) {
-      console.log('Data migration needed...')
-      const migrated = runMigrations()
-      if (migrated) {
-        console.log('✅ Data migrated successfully!')
-        // Show user a notification
-        setTimeout(() => {
-          alert('✅ App updated! Your data has been migrated to the new version.')
-        }, 500)
+    const loadData = async () => {
+      try {
+        const [membersData, tasksData, rewardsData, suggestionsData, settingsData, integrationsData, moduleStatesData] = await Promise.all([
+          familyMembersAPI.getAll(),
+          tasksAPI.getAll(),
+          rewardsAPI.getAll(),
+          rewardSuggestionsAPI.getAll(),
+          settingsAPI.get(),
+          integrationsAPI.getAll(),
+          moduleStatesAPI.get()
+        ]);
+
+        setFamilyMembers(membersData);
+        setTasks(tasksData);
+        setRewards(rewardsData);
+        setRewardSuggestions(suggestionsData);
+        setSettings(Object.keys(settingsData).length > 0 ? settingsData : { pointsPerMinute: 2 });
+        setIntegrations(integrationsData);
+        setModuleStates(Object.keys(moduleStatesData).length > 0 ? moduleStatesData : getDefaultModuleStates());
+      } catch (error) {
+        console.error('Failed to load data:', error);
+        alert('Failed to connect to server. Please check if the server is running.');
+      } finally {
+        setLoading(false);
       }
-    }
+    };
+
+    loadData();
   }, [])
-
-  // Load data from localStorage
-  useEffect(() => {
-    const savedFamilyMembers = localStorage.getItem('familyMembers')
-    const savedTasks = localStorage.getItem('tasks')
-    const savedRewards = localStorage.getItem('rewards')
-    const savedSuggestions = localStorage.getItem('rewardSuggestions')
-    const savedSettings = localStorage.getItem('settings')
-    const savedIntegrations = localStorage.getItem('integrations')
-
-    if (savedFamilyMembers) setFamilyMembers(JSON.parse(savedFamilyMembers))
-    if (savedTasks) setTasks(JSON.parse(savedTasks))
-    if (savedRewards) setRewards(JSON.parse(savedRewards))
-    if (savedSuggestions) setRewardSuggestions(JSON.parse(savedSuggestions))
-    if (savedSettings) setSettings(JSON.parse(savedSettings))
-    if (savedIntegrations) setIntegrations(JSON.parse(savedIntegrations))
-  }, [])
-
-  // Save data to localStorage
-  useEffect(() => {
-    localStorage.setItem('familyMembers', JSON.stringify(familyMembers))
-  }, [familyMembers])
-
-  useEffect(() => {
-    localStorage.setItem('tasks', JSON.stringify(tasks))
-  }, [tasks])
-
-  useEffect(() => {
-    localStorage.setItem('rewards', JSON.stringify(rewards))
-  }, [rewards])
-
-  useEffect(() => {
-    localStorage.setItem('rewardSuggestions', JSON.stringify(rewardSuggestions))
-  }, [rewardSuggestions])
-
-  useEffect(() => {
-    localStorage.setItem('settings', JSON.stringify(settings))
-  }, [settings])
-
-  useEffect(() => {
-    localStorage.setItem('integrations', JSON.stringify(integrations))
-  }, [integrations])
 
   // Handle view mode switch - require authentication for parent view
   const handleViewModeChange = () => {
@@ -379,7 +353,7 @@ function KidView({ familyMembers, tasks, setTasks, rewards, rewardSuggestions, s
   const affordableRewards = rewards.filter(r => selectedKid.points >= r.pointsCost)
   const screenTimeAvailable = Math.floor(selectedKid.points / settings.pointsPerMinute)
 
-  const handleSuggestReward = (e) => {
+  const handleSuggestReward = async (e) => {
     e.preventDefault()
     const newSuggestion = {
       id: Date.now().toString(),
@@ -389,10 +363,17 @@ function KidView({ familyMembers, tasks, setTasks, rewards, rewardSuggestions, s
       status: 'pending',
       createdAt: new Date().toISOString()
     }
-    setRewardSuggestions([...rewardSuggestions, newSuggestion])
-    setSuggestionTitle('')
-    setShowSuggestionForm(false)
-    alert('Reward suggestion sent to parent!')
+
+    try {
+      await rewardSuggestionsAPI.create(newSuggestion)
+      setRewardSuggestions([...rewardSuggestions, newSuggestion])
+      setSuggestionTitle('')
+      setShowSuggestionForm(false)
+      alert('Reward suggestion sent to parent!')
+    } catch (error) {
+      console.error('Failed to create reward suggestion:', error)
+      alert('Failed to send reward suggestion. Please try again.')
+    }
   }
 
   return (
@@ -550,50 +531,78 @@ function KidView({ familyMembers, tasks, setTasks, rewards, rewardSuggestions, s
 }
 
 function Dashboard({ familyMembers, tasks, setTasks, rewards, setFamilyMembers }) {
-  const handleCompleteTask = (taskId, kidId) => {
+  const handleCompleteTask = async (taskId, kidId) => {
     const task = tasks.find(t => t.id === taskId)
     if (!task) return
 
-    const updatedTasks = tasks.map(t =>
-      t.id === taskId
-        ? { ...t, completed: true, completedAt: new Date().toISOString() }
-        : t
-    )
-    setTasks(updatedTasks)
+    try {
+      const updatedTask = { ...task, completed: true, completedAt: new Date().toISOString() }
+      await tasksAPI.update(taskId, updatedTask)
 
-    // Award points and update streak
-    setFamilyMembers(familyMembers.map(k => {
-      if (k.id === kidId) {
-        const newPoints = (k.points || 0) + task.points
-        // Check for streak
-        const todaysTasks = updatedTasks.filter(t =>
-          t.kidId === kidId &&
-          t.completed &&
-          t.completedAt &&
-          new Date(t.completedAt).toDateString() === new Date().toDateString()
-        )
+      const updatedTasks = tasks.map(t =>
+        t.id === taskId ? updatedTask : t
+      )
+      setTasks(updatedTasks)
 
-        return { ...k, points: newPoints, tasksCompletedToday: todaysTasks.length }
+      // Award points and update streak
+      const updatedMembers = familyMembers.map(k => {
+        if (k.id === kidId) {
+          const newPoints = (k.points || 0) + task.points
+          // Check for streak
+          const todaysTasks = updatedTasks.filter(t =>
+            t.kidId === kidId &&
+            t.completed &&
+            t.completedAt &&
+            new Date(t.completedAt).toDateString() === new Date().toDateString()
+          )
+
+          return { ...k, points: newPoints, tasksCompletedToday: todaysTasks.length }
+        }
+        return k
+      })
+
+      // Update the family member in the API
+      const updatedKid = updatedMembers.find(k => k.id === kidId)
+      if (updatedKid) {
+        await familyMembersAPI.update(kidId, updatedKid)
       }
-      return k
-    }))
+
+      setFamilyMembers(updatedMembers)
+    } catch (error) {
+      console.error('Failed to complete task:', error)
+      alert('Failed to complete task. Please try again.')
+    }
   }
 
-  const handleUncompleteTask = (taskId, kidId) => {
+  const handleUncompleteTask = async (taskId, kidId) => {
     const task = tasks.find(t => t.id === taskId)
     if (!task) return
 
-    setTasks(tasks.map(t =>
-      t.id === taskId
-        ? { ...t, completed: false, completedAt: null }
-        : t
-    ))
+    try {
+      const updatedTask = { ...task, completed: false, completedAt: null }
+      await tasksAPI.update(taskId, updatedTask)
 
-    setFamilyMembers(familyMembers.map(k =>
-      k.id === kidId
-        ? { ...k, points: Math.max(0, (k.points || 0) - task.points) }
-        : k
-    ))
+      setTasks(tasks.map(t =>
+        t.id === taskId ? updatedTask : t
+      ))
+
+      const updatedMembers = familyMembers.map(k =>
+        k.id === kidId
+          ? { ...k, points: Math.max(0, (k.points || 0) - task.points) }
+          : k
+      )
+
+      // Update the family member in the API
+      const updatedKid = updatedMembers.find(k => k.id === kidId)
+      if (updatedKid) {
+        await familyMembersAPI.update(kidId, updatedKid)
+      }
+
+      setFamilyMembers(updatedMembers)
+    } catch (error) {
+      console.error('Failed to uncomplete task:', error)
+      alert('Failed to uncomplete task. Please try again.')
+    }
   }
 
   if (familyMembers.length === 0) {
@@ -733,7 +742,7 @@ function KidsManagement({ familyMembers, setFamilyMembers, tasks }) {
 
   const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2']
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     const newKid = {
       id: Date.now().toString(),
@@ -745,14 +754,27 @@ function KidsManagement({ familyMembers, setFamilyMembers, tasks }) {
       points: 0,
       createdAt: new Date().toISOString()
     }
-    setFamilyMembers([...familyMembers, newKid])
-    setFormData({ name: '', age: '', color: '#FF6B6B', avatar: '', role: 'child' })
-    setShowForm(false)
+
+    try {
+      await familyMembersAPI.create(newKid)
+      setFamilyMembers([...familyMembers, newKid])
+      setFormData({ name: '', age: '', color: '#FF6B6B', avatar: '', role: 'child' })
+      setShowForm(false)
+    } catch (error) {
+      console.error('Failed to create family member:', error)
+      alert('Failed to add family member. Please try again.')
+    }
   }
 
-  const handleDelete = (kidId) => {
+  const handleDelete = async (kidId) => {
     if (confirm('Are you sure you want to remove this kid? All their tasks will also be removed.')) {
-      setFamilyMembers(familyMembers.filter(k => k.id !== kidId))
+      try {
+        await familyMembersAPI.delete(kidId)
+        setFamilyMembers(familyMembers.filter(k => k.id !== kidId))
+      } catch (error) {
+        console.error('Failed to delete family member:', error)
+        alert('Failed to delete family member. Please try again.')
+      }
     }
   }
 
@@ -956,7 +978,7 @@ function TaskManagement({ familyMembers, tasks, setTasks }) {
     { value: 'weekly', label: 'Weekly' }
   ]
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     const newTask = {
       id: Date.now().toString(),
@@ -965,14 +987,27 @@ function TaskManagement({ familyMembers, tasks, setTasks }) {
       completed: false,
       createdAt: new Date().toISOString()
     }
-    setTasks([...tasks, newTask])
-    setFormData({ title: '', description: '', points: 10, kidId: '', category: 'chore', recurring: 'none' })
-    setShowForm(false)
+
+    try {
+      await tasksAPI.create(newTask)
+      setTasks([...tasks, newTask])
+      setFormData({ title: '', description: '', points: 10, kidId: '', category: 'chore', recurring: 'none' })
+      setShowForm(false)
+    } catch (error) {
+      console.error('Failed to create task:', error)
+      alert('Failed to create task. Please try again.')
+    }
   }
 
-  const handleDelete = (taskId) => {
+  const handleDelete = async (taskId) => {
     if (confirm('Are you sure you want to delete this task?')) {
-      setTasks(tasks.filter(t => t.id !== taskId))
+      try {
+        await tasksAPI.delete(taskId)
+        setTasks(tasks.filter(t => t.id !== taskId))
+      } catch (error) {
+        console.error('Failed to delete task:', error)
+        alert('Failed to delete task. Please try again.')
+      }
     }
   }
 
@@ -1180,7 +1215,7 @@ function RewardsManagement({ rewards, setRewards, familyMembers, setFamilyMember
 
   const iconOptions = ['🎁', '🍕', '🎮', '📱', '🎬', '🍦', '🎨', '⚽', '🎸', '📚', '🎪', '🎯']
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     const newReward = {
       id: Date.now().toString(),
@@ -1188,34 +1223,53 @@ function RewardsManagement({ rewards, setRewards, familyMembers, setFamilyMember
       pointsCost: parseInt(formData.pointsCost),
       createdAt: new Date().toISOString()
     }
-    setRewards([...rewards, newReward])
-    setFormData({ title: '', description: '', pointsCost: 50, icon: '🎁', rewardType: 'prize' })
-    setShowForm(false)
-  }
 
-  const handleDelete = (rewardId) => {
-    if (confirm('Are you sure you want to delete this reward?')) {
-      setRewards(rewards.filter(r => r.id !== rewardId))
+    try {
+      await rewardsAPI.create(newReward)
+      setRewards([...rewards, newReward])
+      setFormData({ title: '', description: '', pointsCost: 50, icon: '🎁', rewardType: 'prize' })
+      setShowForm(false)
+    } catch (error) {
+      console.error('Failed to create reward:', error)
+      alert('Failed to create reward. Please try again.')
     }
   }
 
-  const handleRedeem = (reward, kid) => {
+  const handleDelete = async (rewardId) => {
+    if (confirm('Are you sure you want to delete this reward?')) {
+      try {
+        await rewardsAPI.delete(rewardId)
+        setRewards(rewards.filter(r => r.id !== rewardId))
+      } catch (error) {
+        console.error('Failed to delete reward:', error)
+        alert('Failed to delete reward. Please try again.')
+      }
+    }
+  }
+
+  const handleRedeem = async (reward, kid) => {
     if (kid.points < reward.pointsCost) {
       alert(`${kid.name} doesn't have enough points for this reward!`)
       return
     }
 
     if (confirm(`Redeem "${reward.title}" for ${kid.name}? This will deduct ${reward.pointsCost} points.`)) {
-      setFamilyMembers(familyMembers.map(k =>
-        k.id === kid.id
-          ? { ...k, points: k.points - reward.pointsCost }
-          : k
-      ))
-      alert(`Success! ${kid.name} redeemed "${reward.title}"!`)
+      try {
+        const updatedKid = { ...kid, points: kid.points - reward.pointsCost }
+        await familyMembersAPI.update(kid.id, updatedKid)
+
+        setFamilyMembers(familyMembers.map(k =>
+          k.id === kid.id ? updatedKid : k
+        ))
+        alert(`Success! ${kid.name} redeemed "${reward.title}"!`)
+      } catch (error) {
+        console.error('Failed to redeem reward:', error)
+        alert('Failed to redeem reward. Please try again.')
+      }
     }
   }
 
-  const handleApproveSuggestion = (suggestion) => {
+  const handleApproveSuggestion = async (suggestion) => {
     const pointsCost = prompt(`How many points should "${suggestion.title}" cost?`, '50')
     if (!pointsCost) return
 
@@ -1228,18 +1282,38 @@ function RewardsManagement({ rewards, setRewards, familyMembers, setFamilyMember
       rewardType: 'prize',
       createdAt: new Date().toISOString()
     }
-    setRewards([...rewards, newReward])
-    setRewardSuggestions(rewardSuggestions.map(s =>
-      s.id === suggestion.id ? { ...s, status: 'approved' } : s
-    ))
-    alert(`Reward approved and added!`)
+
+    try {
+      await rewardsAPI.create(newReward)
+      setRewards([...rewards, newReward])
+
+      const updatedSuggestion = { ...suggestion, status: 'approved' }
+      await rewardSuggestionsAPI.update(suggestion.id, updatedSuggestion)
+
+      setRewardSuggestions(rewardSuggestions.map(s =>
+        s.id === suggestion.id ? updatedSuggestion : s
+      ))
+      alert(`Reward approved and added!`)
+    } catch (error) {
+      console.error('Failed to approve suggestion:', error)
+      alert('Failed to approve suggestion. Please try again.')
+    }
   }
 
-  const handleDenySuggestion = (suggestionId) => {
+  const handleDenySuggestion = async (suggestionId) => {
     if (confirm('Deny this reward suggestion?')) {
-      setRewardSuggestions(rewardSuggestions.map(s =>
-        s.id === suggestionId ? { ...s, status: 'denied' } : s
-      ))
+      try {
+        const suggestion = rewardSuggestions.find(s => s.id === suggestionId)
+        const updatedSuggestion = { ...suggestion, status: 'denied' }
+        await rewardSuggestionsAPI.update(suggestionId, updatedSuggestion)
+
+        setRewardSuggestions(rewardSuggestions.map(s =>
+          s.id === suggestionId ? updatedSuggestion : s
+        ))
+      } catch (error) {
+        console.error('Failed to deny suggestion:', error)
+        alert('Failed to deny suggestion. Please try again.')
+      }
     }
   }
 
@@ -1449,7 +1523,17 @@ function ScreenTimeManager({ familyMembers, setFamilyMembers, settings, setSetti
   const [selectedKid, setSelectedKid] = useState(null)
   const [minutesToRedeem, setMinutesToRedeem] = useState(30)
 
-  const handleRedeemScreenTime = (kid) => {
+  const handleSettingsChange = async (newSettings) => {
+    try {
+      await settingsAPI.update(newSettings)
+      setSettings(newSettings)
+    } catch (error) {
+      console.error('Failed to update settings:', error)
+      alert('Failed to update settings. Please try again.')
+    }
+  }
+
+  const handleRedeemScreenTime = async (kid) => {
     const pointsCost = minutesToRedeem * settings.pointsPerMinute
 
     if (kid.points < pointsCost) {
@@ -1458,12 +1542,22 @@ function ScreenTimeManager({ familyMembers, setFamilyMembers, settings, setSetti
     }
 
     if (confirm(`Redeem ${minutesToRedeem} minutes of screen time for ${kid.name}? This will cost ${pointsCost} points.`)) {
-      setFamilyMembers(familyMembers.map(k =>
-        k.id === kid.id
-          ? { ...k, points: k.points - pointsCost, screenTimeUsed: (k.screenTimeUsed || 0) + minutesToRedeem }
-          : k
-      ))
-      alert(`Success! ${kid.name} earned ${minutesToRedeem} minutes of screen time!`)
+      try {
+        const updatedKid = {
+          ...kid,
+          points: kid.points - pointsCost,
+          screenTimeUsed: (kid.screenTimeUsed || 0) + minutesToRedeem
+        }
+        await familyMembersAPI.update(kid.id, updatedKid)
+
+        setFamilyMembers(familyMembers.map(k =>
+          k.id === kid.id ? updatedKid : k
+        ))
+        alert(`Success! ${kid.name} earned ${minutesToRedeem} minutes of screen time!`)
+      } catch (error) {
+        console.error('Failed to redeem screen time:', error)
+        alert('Failed to redeem screen time. Please try again.')
+      }
     }
   }
 
@@ -1483,7 +1577,7 @@ function ScreenTimeManager({ familyMembers, setFamilyMembers, settings, setSetti
             min="1"
             max="10"
             value={settings.pointsPerMinute}
-            onChange={(e) => setSettings({ ...settings, pointsPerMinute: parseInt(e.target.value) })}
+            onChange={(e) => handleSettingsChange({ ...settings, pointsPerMinute: parseInt(e.target.value) })}
             className="px-4 py-2 rounded-lg border border-gray-300 w-24"
           />
           <span className="text-gray-600 text-sm">

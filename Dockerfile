@@ -1,33 +1,36 @@
-# Multi-stage build for optimized production image
+# Production build with Node.js backend and SQLite
 
-# Stage 1: Build the app
-FROM node:20-alpine AS builder
+FROM node:20-alpine
 
 WORKDIR /app
+
+# Install build dependencies for native modules (better-sqlite3, sharp)
+RUN apk add --no-cache python3 make g++
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
+# Install ALL dependencies (needed for build process)
 RUN npm ci
 
 # Copy source code
 COPY . .
 
-# Build the production app
+# Build the frontend (generates icons and builds Vite app)
 RUN npm run build
 
-# Stage 2: Serve with nginx
-FROM nginx:alpine
+# Remove dev dependencies after build
+RUN npm prune --production
 
-# Copy built files from builder stage
-COPY --from=builder /app/dist /usr/share/nginx/html
+# Create data directory for SQLite database
+RUN mkdir -p /app/server/data
 
-# Copy custom nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Expose port 80
+# Expose port 80 (Node.js will serve on this port)
 EXPOSE 80
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Set production environment
+ENV NODE_ENV=production
+ENV PORT=80
+
+# Start the Node.js server (serves both API and static files)
+CMD ["node", "server/index.js"]

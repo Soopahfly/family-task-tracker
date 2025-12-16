@@ -1,10 +1,17 @@
 # Family Task Tracker
 
-A modern, full-featured family task management system with roles, points, rewards, and smart home integration. Built with React, designed for families.
+A modern, full-featured family task management system with roles, points, rewards, and smart home integration. Built with React + Node.js + SQLite, designed for families to share tasks across multiple devices.
 
 ![Family Task Tracker](https://img.shields.io/badge/version-2.0-blue)
 ![PWA Ready](https://img.shields.io/badge/PWA-ready-green)
 ![Docker](https://img.shields.io/badge/docker-ready-blue)
+
+## 🏗️ Architecture
+
+- **Frontend:** React 18 + Vite + TailwindCSS
+- **Backend:** Node.js + Express REST API
+- **Database:** SQLite (persistent, serverless)
+- **Deployment:** Single Docker container with volume persistence
 
 ## ✨ Features
 
@@ -42,23 +49,39 @@ cd family-task-tracker
 # Install dependencies
 npm install
 
-# Start development server
+# Terminal 1: Start backend API server
+npm run server
+
+# Terminal 2: Start frontend dev server
 npm run dev
 ```
 
-Open http://localhost:5173
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:3001
 
 ### Docker Production Mode
 
-**Option 1: Pre-Built Image (Fastest - No Build Required!)**
+**Option 1: Pre-Built Image with Docker Compose (Recommended)**
 
 ```bash
-# Pull and run pre-built image
-docker run -d -p 5173:80 --name family-task-tracker \
+# Download docker-compose.production.yml
+# Then run:
+docker compose -f docker-compose.production.yml up -d
+```
+
+**Option 2: Pre-Built Image with Docker Run**
+
+```bash
+# Pull and run pre-built image with persistent storage
+docker run -d \
+  -p 3000:80 \
+  -v family-task-data:/app/server \
+  --name family-task-tracker \
+  --restart unless-stopped \
   ghcr.io/soopahfly/family-task-tracker:latest
 ```
 
-**Option 2: Build Locally**
+**Option 3: Build Locally**
 
 ```bash
 # Build and run
@@ -66,9 +89,9 @@ docker compose build
 docker compose up -d
 ```
 
-Open http://localhost:5173
+Open http://localhost:3000
 
-See [PREBUILT_DOCKER.md](PREBUILT_DOCKER.md) for more deployment options.
+**Important:** The `-v family-task-data:/app/server` volume ensures your SQLite database persists across container restarts and updates.
 
 ## 📱 Progressive Web App
 
@@ -79,12 +102,13 @@ Install as an app on any device:
 
 Works offline, sends notifications, feels like a native app!
 
-## 🔐 Security
+## 🔐 Security & Data
 
 - Password protection with SHA-256 hashing
 - Session management (24-hour timeout)
-- Browser-based storage (localStorage/IndexedDB)
-- No data sent to external servers
+- **Server-side persistence** - SQLite database shared across all devices
+- Data stored locally on your server (not sent to external services)
+- Automatic database backups via Docker volumes
 
 ## 🏠 Smart Home Integration
 

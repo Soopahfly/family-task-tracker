@@ -6,6 +6,7 @@ import {
   testWLEDConnection,
   syncAllLights
 } from './integrations'
+import { integrationsAPI } from './utils/api'
 
 export default function IntegrationsManager({ kids, tasks, integrations, setIntegrations }) {
   const [showForm, setShowForm] = useState(false)
@@ -34,18 +35,24 @@ export default function IntegrationsManager({ kids, tasks, integrations, setInte
       segment: parseInt(formData.segment)
     }
 
-    setIntegrations([...integrations, newIntegration])
-    setFormData({
-      kidId: '',
-      type: 'homeassistant',
-      enabled: true,
-      haUrl: '',
-      haToken: '',
-      entityId: '',
-      wledUrl: '',
-      segment: 0
-    })
-    setShowForm(false)
+    try {
+      await integrationsAPI.create(newIntegration)
+      setIntegrations([...integrations, newIntegration])
+      setFormData({
+        kidId: '',
+        type: 'homeassistant',
+        enabled: true,
+        haUrl: '',
+        haToken: '',
+        entityId: '',
+        wledUrl: '',
+        segment: 0
+      })
+      setShowForm(false)
+    } catch (error) {
+      console.error('Failed to create integration:', error)
+      alert('Failed to create integration. Please try again.')
+    }
   }
 
   const handleTest = async (integration) => {
@@ -83,16 +90,31 @@ export default function IntegrationsManager({ kids, tasks, integrations, setInte
     }
   }
 
-  const handleDelete = (integrationId) => {
+  const handleDelete = async (integrationId) => {
     if (confirm('Remove this light integration?')) {
-      setIntegrations(integrations.filter(i => i.id !== integrationId))
+      try {
+        await integrationsAPI.delete(integrationId)
+        setIntegrations(integrations.filter(i => i.id !== integrationId))
+      } catch (error) {
+        console.error('Failed to delete integration:', error)
+        alert('Failed to delete integration. Please try again.')
+      }
     }
   }
 
-  const toggleEnabled = (integrationId) => {
-    setIntegrations(integrations.map(i =>
-      i.id === integrationId ? { ...i, enabled: !i.enabled } : i
-    ))
+  const toggleEnabled = async (integrationId) => {
+    try {
+      const integration = integrations.find(i => i.id === integrationId)
+      const updatedIntegration = { ...integration, enabled: !integration.enabled }
+      await integrationsAPI.update(integrationId, updatedIntegration)
+
+      setIntegrations(integrations.map(i =>
+        i.id === integrationId ? updatedIntegration : i
+      ))
+    } catch (error) {
+      console.error('Failed to toggle integration:', error)
+      alert('Failed to toggle integration. Please try again.')
+    }
   }
 
   const getKidById = (kidId) => kids.find(k => k.id === kidId)

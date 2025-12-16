@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Settings, Zap, Timer, Lightbulb, BarChart3, Flame, Calendar, Eye, Gift, Wifi, ListTodo, Star, Layout, Save, RotateCcw, Check, X, AlertCircle } from 'lucide-react'
-import { availableModules, moduleCategories, getModulesByCategory, canDisableModule } from '../modules/moduleConfig'
+import { availableModules, moduleCategories, getModulesByCategory, canDisableModule, getDefaultModuleStates } from '../modules/moduleConfig'
+import { moduleStatesAPI } from '../utils/api'
 import PasswordSettings from './PasswordSettings'
 
 const iconMap = {
@@ -47,16 +48,27 @@ export default function AdminSettings({ moduleStates, setModuleStates }) {
     setHasChanges(true)
   }
 
-  const handleSave = () => {
-    localStorage.setItem('moduleStates', JSON.stringify(moduleStates))
-    setHasChanges(false)
-    alert('Settings saved! Refresh the page to apply changes.')
+  const handleSave = async () => {
+    try {
+      await moduleStatesAPI.update(moduleStates)
+      setHasChanges(false)
+      alert('Settings saved! Refresh the page to apply changes.')
+    } catch (error) {
+      console.error('Failed to save module states:', error)
+      alert('Failed to save settings. Please try again.')
+    }
   }
 
-  const handleReset = () => {
+  const handleReset = async () => {
     if (confirm('Reset all modules to default settings? This will reload the page.')) {
-      localStorage.removeItem('moduleStates')
-      window.location.reload()
+      try {
+        const defaultStates = getDefaultModuleStates()
+        await moduleStatesAPI.update(defaultStates)
+        window.location.reload()
+      } catch (error) {
+        console.error('Failed to reset module states:', error)
+        alert('Failed to reset settings. Please try again.')
+      }
     }
   }
 

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Plus, Star, Zap, GripVertical } from 'lucide-react'
+import { tasksAPI } from '../utils/api'
 
 /**
  * Task Pool Component - Drag & Drop Task Assignment
@@ -37,7 +38,7 @@ export default function TaskPool({ familyMembers, tasks, setTasks }) {
   ]
 
   // Handle form submission to create pool task
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     const newTask = {
       id: Date.now().toString(),
@@ -53,18 +54,25 @@ export default function TaskPool({ familyMembers, tasks, setTasks }) {
       createdAt: new Date().toISOString(),
       deadline: formData.deadline || null
     }
-    setTasks([...tasks, newTask])
-    setFormData({
-      title: '',
-      description: '',
-      points: 10,
-      category: 'chore',
-      recurring: 'none',
-      taskType: 'optional',
-      claimedBy: null,
-      deadline: ''
-    })
-    setShowForm(false)
+
+    try {
+      await tasksAPI.create(newTask)
+      setTasks([...tasks, newTask])
+      setFormData({
+        title: '',
+        description: '',
+        points: 10,
+        category: 'chore',
+        recurring: 'none',
+        taskType: 'optional',
+        claimedBy: null,
+        deadline: ''
+      })
+      setShowForm(false)
+    } catch (error) {
+      console.error('Failed to create task:', error)
+      alert('Failed to create task. Please try again.')
+    }
   }
 
   // Drag handlers
@@ -76,7 +84,7 @@ export default function TaskPool({ familyMembers, tasks, setTasks }) {
     e.preventDefault() // Required to allow drop
   }
 
-  const handleDrop = (memberId) => {
+  const handleDrop = async (memberId) => {
     if (!draggedTask) return
 
     // Check if member has completed all core tasks
@@ -89,13 +97,25 @@ export default function TaskPool({ familyMembers, tasks, setTasks }) {
       return
     }
 
-    // Assign task to member
-    setTasks(tasks.map(t =>
-      t.id === draggedTask.id
-        ? { ...t, kidId: memberId, claimedBy: memberId, claimedAt: new Date().toISOString() }
-        : t
-    ))
-    setDraggedTask(null)
+    try {
+      // Assign task to member
+      const updatedTask = {
+        ...draggedTask,
+        kidId: memberId,
+        claimedBy: memberId,
+        claimedAt: new Date().toISOString()
+      }
+      await tasksAPI.update(draggedTask.id, updatedTask)
+
+      setTasks(tasks.map(t =>
+        t.id === draggedTask.id ? updatedTask : t
+      ))
+      setDraggedTask(null)
+    } catch (error) {
+      console.error('Failed to assign task:', error)
+      alert('Failed to assign task. Please try again.')
+      setDraggedTask(null)
+    }
   }
 
   const handleDragEnd = () => {
@@ -109,7 +129,7 @@ export default function TaskPool({ familyMembers, tasks, setTasks }) {
     setSelectedTaskForAssign(task)
   }
 
-  const handleMemberSelect = (memberId) => {
+  const handleMemberSelect = async (memberId) => {
     if (!selectedTaskForAssign) return
 
     // Same core task check
@@ -122,12 +142,24 @@ export default function TaskPool({ familyMembers, tasks, setTasks }) {
       return
     }
 
-    setTasks(tasks.map(t =>
-      t.id === selectedTaskForAssign.id
-        ? { ...t, kidId: memberId, claimedBy: memberId, claimedAt: new Date().toISOString() }
-        : t
-    ))
-    setSelectedTaskForAssign(null)
+    try {
+      const updatedTask = {
+        ...selectedTaskForAssign,
+        kidId: memberId,
+        claimedBy: memberId,
+        claimedAt: new Date().toISOString()
+      }
+      await tasksAPI.update(selectedTaskForAssign.id, updatedTask)
+
+      setTasks(tasks.map(t =>
+        t.id === selectedTaskForAssign.id ? updatedTask : t
+      ))
+      setSelectedTaskForAssign(null)
+    } catch (error) {
+      console.error('Failed to assign task:', error)
+      alert('Failed to assign task. Please try again.')
+      setSelectedTaskForAssign(null)
+    }
   }
 
   const getCategoryColor = (category) => {

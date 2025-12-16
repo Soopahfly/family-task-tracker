@@ -1,5 +1,6 @@
 import { Check, Star, Zap, Trophy, TrendingUp } from 'lucide-react'
 import { getLeaderboard } from '../utils/achievementHats'
+import { tasksAPI, familyMembersAPI } from '../utils/api'
 
 /**
  * Enhanced Dashboard - Family Member Grid with Achievement Hats
@@ -8,24 +9,37 @@ import { getLeaderboard } from '../utils/achievementHats'
 export default function EnhancedDashboard({ familyMembers, tasks, setTasks, setFamilyMembers }) {
   const leaderboard = getLeaderboard(familyMembers, tasks)
 
-  const handleCompleteTask = (taskId, kidId) => {
+  const handleCompleteTask = async (taskId, kidId) => {
     const task = tasks.find(t => t.id === taskId)
     if (!task) return
 
-    const updatedTasks = tasks.map(t =>
-      t.id === taskId
-        ? { ...t, completed: true, completedAt: new Date().toISOString() }
-        : t
-    )
-    setTasks(updatedTasks)
+    try {
+      const updatedTask = { ...task, completed: true, completedAt: new Date().toISOString() }
+      await tasksAPI.update(taskId, updatedTask)
 
-    // Award points
-    const updatedMembers = familyMembers.map(kid =>
-      kid.id === kidId
-        ? { ...kid, points: (kid.points || 0) + task.points }
-        : kid
-    )
-    setFamilyMembers(updatedMembers)
+      const updatedTasks = tasks.map(t =>
+        t.id === taskId ? updatedTask : t
+      )
+      setTasks(updatedTasks)
+
+      // Award points
+      const updatedMembers = familyMembers.map(kid =>
+        kid.id === kidId
+          ? { ...kid, points: (kid.points || 0) + task.points }
+          : kid
+      )
+
+      // Update the family member in the API
+      const updatedKid = updatedMembers.find(k => k.id === kidId)
+      if (updatedKid) {
+        await familyMembersAPI.update(kidId, updatedKid)
+      }
+
+      setFamilyMembers(updatedMembers)
+    } catch (error) {
+      console.error('Failed to complete task:', error)
+      alert('Failed to complete task. Please try again.')
+    }
   }
 
   return (
