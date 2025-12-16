@@ -8,7 +8,7 @@ services:
       - "3000:80"
     restart: unless-stopped
     volumes:
-      - family-task-data:/app/server
+      - family-task-data:/app/server/data
 
 volumes:
   family-task-data:
