@@ -60,14 +60,7 @@ if (streakResult) {
   console.log('\n✅ Created new streak (day 1)');
 }
 
-// Update family member's current_streak and longest_streak
-db.prepare(`
-  UPDATE family_members
-  SET current_streak = 1, longest_streak = 1
-  WHERE id = ?
-`).run(flynnId);
-
-console.log('✅ Updated Flynn\'s streak stats\n');
+console.log('✅ Streak data saved to streaks table\n');
 
 // Verify
 const historyCount = db.prepare('SELECT COUNT(*) as count FROM task_history WHERE family_member_id = ?').get(flynnId);
