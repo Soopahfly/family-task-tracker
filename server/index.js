@@ -5,6 +5,7 @@ import db from './db.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { checkAchievements, getAchievementsWithProgress } from './achievementEngine.js';
+import { startTaskScheduler, processRecurringTasks } from './taskScheduler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -74,23 +75,23 @@ app.get('/api/tasks', (req, res) => {
 });
 
 app.post('/api/tasks', (req, res) => {
-  const { id, title, description, points, duration, category, difficulty, assigned_to, created_by, status, deadline, deadline_type, created_by_kid } = req.body;
+  const { id, title, description, points, duration, category, difficulty, assigned_to, created_by, status, deadline, deadline_type, created_by_kid, recurring, recurring_parent_id } = req.body;
   const stmt = db.prepare(
-    `INSERT INTO tasks (id, title, description, points, duration, category, difficulty, assigned_to, created_by, status, deadline, deadline_type, created_by_kid)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO tasks (id, title, description, points, duration, category, difficulty, assigned_to, created_by, status, deadline, deadline_type, created_by_kid, recurring, recurring_parent_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   );
-  stmt.run(id, title, description, points || 0, duration, category, difficulty, assigned_to, created_by, status || 'available', deadline, deadline_type, created_by_kid || 0);
+  stmt.run(id, title, description, points || 0, duration, category, difficulty, assigned_to, created_by, status || 'available', deadline, deadline_type, created_by_kid || 0, recurring || 'none', recurring_parent_id || null);
   res.json(req.body);
 });
 
 app.put('/api/tasks/:id', (req, res) => {
   const { id } = req.params;
-  const { title, description, points, duration, category, difficulty, assigned_to, status, completed_at, deadline, deadline_type, return_reason } = req.body;
+  const { title, description, points, duration, category, difficulty, assigned_to, status, completed_at, deadline, deadline_type, return_reason, recurring, recurring_parent_id } = req.body;
   const stmt = db.prepare(
     `UPDATE tasks SET title = ?, description = ?, points = ?, duration = ?, category = ?, difficulty = ?,
-     assigned_to = ?, status = ?, completed_at = ?, deadline = ?, deadline_type = ?, return_reason = ? WHERE id = ?`
+     assigned_to = ?, status = ?, completed_at = ?, deadline = ?, deadline_type = ?, return_reason = ?, recurring = ?, recurring_parent_id = ? WHERE id = ?`
   );
-  stmt.run(title, description, points, duration, category, difficulty, assigned_to, status, completed_at, deadline, deadline_type, return_reason, id);
+  stmt.run(title, description, points, duration, category, difficulty, assigned_to, status, completed_at, deadline, deadline_type, return_reason, recurring, recurring_parent_id, id);
   res.json(req.body);
 });
 
@@ -759,6 +760,20 @@ if (process.env.NODE_ENV === 'production') {
     res.sendFile(join(__dirname, '../dist/index.html'));
   });
 }
+
+// Start the task scheduler
+startTaskScheduler();
+
+// Add API endpoint to manually trigger recurring task processing (for testing)
+app.post('/api/recurring-tasks/process', (req, res) => {
+  try {
+    const result = processRecurringTasks();
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('Error processing recurring tasks:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);

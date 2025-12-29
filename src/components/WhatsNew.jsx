@@ -1,10 +1,34 @@
-import { Sparkles, Award, ListChecks, Shield, Code2, Package, Trophy, Flame, Calendar, Layers } from 'lucide-react'
+import { Sparkles, Award, ListChecks, Shield, Code2, Package, Trophy, Flame, Calendar, Layers, RefreshCw, FolderTree } from 'lucide-react'
 import packageJson from '../../package.json'
 
 export default function WhatsNew() {
   const version = packageJson.version
 
   const changelog = [
+    {
+      version: '2.3.0',
+      date: 'December 2024',
+      changes: [
+        {
+          icon: RefreshCw,
+          color: 'text-blue-600 bg-blue-50',
+          title: 'Recurring Tasks',
+          description: 'Set tasks to recur daily or weekly! Create "Brush teeth" as a daily task or "Take out trash" as weekly, and they automatically recreate after completion. Perfect for routine chores that repeat. Runs at midnight to create new instances.'
+        },
+        {
+          icon: FolderTree,
+          color: 'text-purple-600 bg-purple-50',
+          title: 'Grouped Navigation',
+          description: 'Cleaner navigation with organized dropdown menus! Items grouped into: Overview, Tasks, Progress, Family, and Settings. Reduces clutter and makes features easier to find. Click any group to see its items.'
+        },
+        {
+          icon: RefreshCw,
+          color: 'text-green-600 bg-green-50',
+          title: 'Auto-Refresh (Multi-Device Sync)',
+          description: 'Fixed: Changes made on one computer now automatically appear on other devices! App refreshes every 10 seconds in the background, so assigned tasks sync instantly across all family computers.'
+        }
+      ]
+    },
     {
       version: '2.2.0',
       date: 'December 2024',

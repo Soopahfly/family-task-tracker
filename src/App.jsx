@@ -12,7 +12,7 @@ import EnhancedDashboard from './components/EnhancedDashboard'
 import ReturnTaskDialog from './components/ReturnTaskDialog'
 import ErrorBoundary from './components/ErrorBoundary'
 import Header from './components/Header'
-import Navigation from './components/Navigation'
+import NavigationGrouped from './components/NavigationGrouped'
 import KidView from './components/KidView'
 import TaskManagement from './components/TaskManagement'
 import RewardsManagement from './components/RewardsManagement'
@@ -54,7 +54,7 @@ function App() {
 
   // Load all data from API on mount
   useEffect(() => {
-    const loadData = async () => {
+    const loadData = async (isInitialLoad = true) => {
       try {
         // Load data with individual error handling - if one fails, others still work
         const [membersData, tasksData, rewardsData, suggestionsData, settingsData, integrationsData, moduleStatesData, passwordSet, meritTypesData, meritsData] = await Promise.allSettled([
@@ -86,12 +86,14 @@ function App() {
         if (meritTypesData.status === 'fulfilled') setMeritTypes(meritTypesData.value);
         if (meritsData.status === 'fulfilled') setMerits(meritsData.value);
 
-        // Set authentication state based on password status
-        const passwordIsSet = passwordSet.status === 'fulfilled' ? passwordSet.value : false;
-        if (!passwordIsSet) {
-          setIsAuthenticated(true); // No password set, allow access
-        } else {
-          setIsAuthenticated(isSessionValid()); // Check if session is valid
+        // Set authentication state based on password status (only on initial load)
+        if (isInitialLoad) {
+          const passwordIsSet = passwordSet.status === 'fulfilled' ? passwordSet.value : false;
+          if (!passwordIsSet) {
+            setIsAuthenticated(true); // No password set, allow access
+          } else {
+            setIsAuthenticated(isSessionValid()); // Check if session is valid
+          }
         }
 
         // Log any errors but don't block the app
@@ -105,11 +107,23 @@ function App() {
         console.error('Failed to load data:', error);
         // Don't show blocking alert - let the app continue
       } finally {
-        setLoading(false);
+        if (isInitialLoad) {
+          setLoading(false);
+        }
       }
     };
 
-    loadData();
+    // Initial load
+    loadData(true);
+
+    // Set up polling interval (refresh every 10 seconds for multi-device sync)
+    const POLL_INTERVAL = 10000; // 10 seconds
+    const pollInterval = setInterval(() => {
+      loadData(false); // Background refresh, don't reset loading state
+    }, POLL_INTERVAL);
+
+    // Cleanup interval on unmount
+    return () => clearInterval(pollInterval);
   }, [])
 
   // Handle view mode switch - require authentication for parent view
@@ -163,7 +177,7 @@ function App() {
 
         {viewMode === 'parent' ? (
           <>
-            <Navigation activeView={activeView} setActiveView={setActiveView} rewardSuggestions={rewardSuggestions} moduleStates={moduleStates} />
+            <NavigationGrouped activeView={activeView} setActiveView={setActiveView} rewardSuggestions={rewardSuggestions} moduleStates={moduleStates} />
 
             {activeView === 'dashboard' && (
               <ErrorBoundary sectionName="Dashboard">

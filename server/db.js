@@ -126,6 +126,22 @@ try {
   // Column already exists
 }
 
+// Migration: Add recurring column to tasks if it doesn't exist
+try {
+  db.exec(`ALTER TABLE tasks ADD COLUMN recurring TEXT DEFAULT 'none'`);
+  console.log('✅ Migration: Added recurring column');
+} catch (e) {
+  // Column already exists
+}
+
+// Migration: Add recurring_parent_id column to tasks if it doesn't exist
+try {
+  db.exec(`ALTER TABLE tasks ADD COLUMN recurring_parent_id TEXT`);
+  console.log('✅ Migration: Added recurring_parent_id column');
+} catch (e) {
+  // Column already exists
+}
+
 // ==================== STAGE 1: ACHIEVEMENTS & STREAKS ====================
 
 // Create achievements table

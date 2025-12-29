@@ -24,15 +24,24 @@ function TaskManagement({ familyMembers, tasks, setTasks }) {
     e.preventDefault()
     const newTask = {
       id: Date.now().toString(),
-      ...formData,
+      title: formData.title,
+      description: formData.description,
       points: parseInt(formData.points),
-      completed: false,
-      createdAt: new Date().toISOString()
+      category: formData.category,
+      difficulty: 'medium',
+      assigned_to: formData.kidId || null,
+      created_by: null,
+      status: 'available',
+      recurring: formData.recurring,
+      recurring_parent_id: null,
+      created_at: new Date().toISOString()
     }
 
     try {
       await tasksAPI.create(newTask)
-      setTasks([...tasks, newTask])
+      // Fetch updated tasks from server to ensure consistency
+      const updatedTasks = await tasksAPI.getAll()
+      setTasks(updatedTasks)
       setFormData({ title: '', description: '', points: 10, kidId: '', category: 'chore', recurring: 'none' })
       setShowForm(false)
     } catch (error) {
@@ -186,30 +195,38 @@ function TaskManagement({ familyMembers, tasks, setTasks }) {
           </div>
         ) : (
           tasks.map(task => {
-            const kid = familyMembers.find(k => k.id === task.kidId)
+            const assignedMember = familyMembers.find(k => k.id === task.assigned_to)
+            const isRecurringTemplate = task.recurring && task.recurring !== 'none' && !task.recurring_parent_id
+            const isRecurringInstance = task.recurring_parent_id !== null && task.recurring_parent_id !== undefined
             return (
               <div
                 key={task.id}
                 className={`border-2 rounded-xl p-4 ${
-                  task.completed ? 'bg-green-50 border-green-200' : 'border-gray-200'
+                  task.status === 'completed' ? 'bg-green-50 border-green-200' : 'border-gray-200'
                 }`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <h3 className={`font-bold text-lg ${task.completed ? 'line-through text-gray-500' : 'text-gray-800'}`}>
+                      <h3 className={`font-bold text-lg ${task.status === 'completed' ? 'line-through text-gray-500' : 'text-gray-800'}`}>
                         {task.title}
                       </h3>
                       <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getCategoryColor(task.category)}`}>
                         {task.category}
                       </span>
-                      {task.recurring !== 'none' && (
+                      {isRecurringTemplate && (
                         <span className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
                           <Calendar size={12} />
-                          {task.recurring}
+                          {task.recurring} (template)
                         </span>
                       )}
-                      {task.completed && (
+                      {isRecurringInstance && (
+                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                          <Calendar size={12} />
+                          recurring
+                        </span>
+                      )}
+                      {task.status === 'completed' && (
                         <span className="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-semibold">
                           Completed
                         </span>
@@ -222,9 +239,9 @@ function TaskManagement({ familyMembers, tasks, setTasks }) {
                       <span className="text-purple-600 font-semibold">
                         +{task.points} points
                       </span>
-                      {kid && (
+                      {assignedMember && (
                         <span className="text-gray-500">
-                          Assigned to: <span className="font-semibold">{kid.name}</span>
+                          Assigned to: <span className="font-semibold">{assignedMember.name}</span>
                         </span>
                       )}
                     </div>
@@ -232,6 +249,7 @@ function TaskManagement({ familyMembers, tasks, setTasks }) {
                   <button
                     onClick={() => handleDelete(task.id)}
                     className="text-red-500 hover:bg-red-50 p-2 rounded-lg"
+                    title={isRecurringTemplate ? 'Delete recurring template (stops future instances)' : 'Delete task'}
                   >
                     <X size={20} />
                   </button>
