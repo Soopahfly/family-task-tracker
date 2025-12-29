@@ -1,10 +1,28 @@
-import { Sparkles, Award, ListChecks, Shield, Code2, Package, Trophy, Flame, Calendar, Layers, RefreshCw, FolderTree } from 'lucide-react'
+import { Sparkles, Award, ListChecks, Shield, Code2, Package, Trophy, Flame, Calendar, Layers, RefreshCw, FolderTree, Bug } from 'lucide-react'
 import packageJson from '../../package.json'
 
 export default function WhatsNew() {
   const version = packageJson.version
 
   const changelog = [
+    {
+      version: '2.3.1',
+      date: 'December 2025',
+      changes: [
+        {
+          icon: Bug,
+          color: 'text-red-600 bg-red-50',
+          title: 'Dashboard Stats Fix',
+          description: 'Fixed: Dashboard statistics (Today, 24h, Active tasks) now display correctly. Resolved field name mismatch where completed tasks were not being counted in statistics and calendar views.'
+        },
+        {
+          icon: Bug,
+          color: 'text-orange-600 bg-orange-50',
+          title: 'Task Assignment Fix',
+          description: 'Fixed: Task Pool assignments now persist correctly across devices. Tasks assigned via drag-and-drop will no longer disappear after refresh or on other computers.'
+        }
+      ]
+    },
     {
       version: '2.3.0',
       date: 'December 2024',
