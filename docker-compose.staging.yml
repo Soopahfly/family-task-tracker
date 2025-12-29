@@ -19,4 +19,4 @@ services:
 
 volumes:
   family-task-tracker_staging-data:
-    # Note: This volume will be created and populated with a copy of production data
+    external: true  # Uses the pre-created staging volume with copied production data
