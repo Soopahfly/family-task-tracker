@@ -1,4 +1,4 @@
-import { Users, Trophy, ListTodo, TrendingUp, Timer, BarChart3, Zap, Database, Bell, Settings, Layers, Award, Sparkles } from 'lucide-react'
+import { Users, Trophy, ListTodo, TrendingUp, Timer, BarChart3, Zap, Database, Bell, Settings, Layers, Award, Sparkles, Star, Calendar } from 'lucide-react'
 
 function Navigation({ activeView, setActiveView, rewardSuggestions, moduleStates }) {
   const pendingSuggestions = rewardSuggestions.filter(s => s.status === 'pending').length
@@ -15,6 +15,9 @@ function Navigation({ activeView, setActiveView, rewardSuggestions, moduleStates
     { id: 'tasks', label: 'Tasks', icon: ListTodo },
     { id: 'rewards', label: 'Rewards', icon: Trophy, badge: pendingSuggestions },
     { id: 'merits', label: 'Merits', icon: Award },
+    { id: 'achievements', label: 'Achievements', icon: Star },
+    { id: 'templates', label: 'Templates', icon: Layers },
+    { id: 'calendar', label: 'Calendar', icon: Calendar },
     // Conditional tabs based on module states
     ...(isEnabled('screenTime') ? [{ id: 'screentime', label: 'Screen Time', icon: Timer }] : []),
     ...(isEnabled('statistics') ? [{ id: 'stats', label: 'Statistics', icon: BarChart3 }] : []),

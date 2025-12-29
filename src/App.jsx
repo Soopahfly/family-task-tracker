@@ -21,6 +21,9 @@ import Statistics from './components/Statistics'
 import KidsManagement from './components/KidsManagement'
 import MeritManagement from './components/MeritManagement'
 import WhatsNew from './components/WhatsNew'
+import Achievements from './components/Achievements'
+import TaskTemplates from './components/TaskTemplates'
+import TaskCalendar from './components/TaskCalendar'
 import { getDefaultModuleStates } from './modules/moduleConfig'
 import { formatDeadline, getDeadlineColor } from './utils/notificationManager'
 import { loadPasswordStatus, verifyPassword, isSessionValid, logoutSession } from './utils/authManager'
@@ -273,6 +276,28 @@ function App() {
             {activeView === 'whatsnew' && (
               <ErrorBoundary sectionName="What's New">
                 <WhatsNew />
+              </ErrorBoundary>
+            )}
+
+            {activeView === 'achievements' && (
+              <ErrorBoundary sectionName="Achievements">
+                <Achievements familyMembers={familyMembers} />
+              </ErrorBoundary>
+            )}
+
+            {activeView === 'templates' && (
+              <ErrorBoundary sectionName="Task Templates">
+                <TaskTemplates
+                  familyMembers={familyMembers}
+                  tasks={tasks}
+                  setTasks={setTasks}
+                />
+              </ErrorBoundary>
+            )}
+
+            {activeView === 'calendar' && (
+              <ErrorBoundary sectionName="Task Calendar">
+                <TaskCalendar familyMembers={familyMembers} />
               </ErrorBoundary>
             )}
           </>

@@ -275,7 +275,7 @@ function RewardsManagement({ rewards, setRewards, familyMembers, setFamilyMember
             <p className="text-gray-500 italic">Add familyMembers first to redeem rewards</p>
           ) : (
             <div className="space-y-4">
-              {familyMembers.map(kid => (
+              {familyMembers.filter(member => member.role !== 'parent').map(kid => (
                 <div key={kid.id} className="border-2 border-gray-200 rounded-xl p-4">
                   <div className="flex items-center gap-3 mb-4">
                     <div

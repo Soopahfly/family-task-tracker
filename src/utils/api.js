@@ -146,3 +146,58 @@ export const meritsAPI = {
     method: 'DELETE',
   }),
 };
+
+// Achievements
+export const achievementsAPI = {
+  getAll: () => apiCall('/api/achievements'),
+  getForMember: (memberId) => apiCall(`/api/achievements/${memberId}`),
+  check: (memberId) => apiCall(`/api/achievements/check/${memberId}`, {
+    method: 'POST',
+  }),
+};
+
+// Streaks
+export const streaksAPI = {
+  get: (memberId) => apiCall(`/api/streaks/${memberId}`),
+  update: (memberId, streakType = 'daily') => apiCall(`/api/streaks/update/${memberId}`, {
+    method: 'POST',
+    body: JSON.stringify({ streak_type: streakType }),
+  }),
+};
+
+// Task Templates
+export const taskTemplatesAPI = {
+  getAll: () => apiCall('/api/task-templates'),
+  create: (template) => apiCall('/api/task-templates', {
+    method: 'POST',
+    body: JSON.stringify(template),
+  }),
+  deploy: (id, assignedTo, createdBy) => apiCall(`/api/task-templates/${id}/deploy`, {
+    method: 'POST',
+    body: JSON.stringify({ assigned_to: assignedTo, created_by: createdBy }),
+  }),
+  delete: (id) => apiCall(`/api/task-templates/${id}`, {
+    method: 'DELETE',
+  }),
+};
+
+// Task History
+export const taskHistoryAPI = {
+  get: (memberId, startDate, endDate) => {
+    let url = `/api/task-history/${memberId}`;
+    if (startDate && endDate) {
+      url += `?startDate=${startDate}&endDate=${endDate}`;
+    }
+    return apiCall(url);
+  },
+  add: (entry) => apiCall('/api/task-history', {
+    method: 'POST',
+    body: JSON.stringify(entry),
+  }),
+};
+
+// Task Completion (with achievements, streaks, history integration)
+export const completeTask = (taskId, familyMemberId) => apiCall(`/api/tasks/${taskId}/complete`, {
+  method: 'POST',
+  body: JSON.stringify({ family_member_id: familyMemberId }),
+});

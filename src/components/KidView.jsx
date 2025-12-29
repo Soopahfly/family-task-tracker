@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Users, Star, Clock, Check, ListTodo, Gift, Lightbulb, X, Plus, Award } from 'lucide-react'
 import ReturnTaskDialog from './ReturnTaskDialog'
+import StreakDisplay from './StreakDisplay'
 import { rewardSuggestionsAPI, tasksAPI, meritsAPI, familyMembersAPI } from '../utils/api'
 
 function KidView({ familyMembers, tasks, setTasks, rewards, rewardSuggestions, setRewardSuggestions, selectedKid, setSelectedKid, settings, meritTypes, setFamilyMembers, merits, setMerits }) {
@@ -225,6 +226,9 @@ function KidView({ familyMembers, tasks, setTasks, rewards, rewardSuggestions, s
           </div>
         </div>
       </div>
+
+      {/* Streak Display */}
+      <StreakDisplay memberId={selectedKid.id} />
 
       {/* Create Your Own Task Section */}
       <div className="bg-white rounded-2xl p-6 shadow-xl">

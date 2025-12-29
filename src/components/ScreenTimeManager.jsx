@@ -99,7 +99,7 @@ function ScreenTimeManager({ familyMembers, setFamilyMembers, settings, setSetti
         {familyMembers.length === 0 ? (
           <p className="text-gray-400 italic text-center py-8">No family members added yet</p>
         ) : (
-          familyMembers.map(kid => {
+          familyMembers.filter(member => member.role !== 'parent').map(kid => {
             const pointsCost = minutesToRedeem * settings.pointsPerMinute
             const canAfford = kid.points >= pointsCost
             const availableMinutes = Math.floor(kid.points / settings.pointsPerMinute)

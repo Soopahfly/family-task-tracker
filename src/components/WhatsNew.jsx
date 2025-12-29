@@ -1,10 +1,40 @@
-import { Sparkles, Award, ListChecks, Shield, Code2, Package } from 'lucide-react'
+import { Sparkles, Award, ListChecks, Shield, Code2, Package, Trophy, Flame, Calendar, Layers } from 'lucide-react'
 import packageJson from '../../package.json'
 
 export default function WhatsNew() {
   const version = packageJson.version
 
   const changelog = [
+    {
+      version: '2.2.0',
+      date: 'December 2024',
+      changes: [
+        {
+          icon: Trophy,
+          color: 'text-yellow-600 bg-yellow-50',
+          title: 'Achievements System',
+          description: '16 achievements across 4 categories (Streaks, Completion, Time-based, Points). Kids earn badges with rarity levels (common to legendary) and bonus points. View progress bars showing how close you are to unlocking each achievement!'
+        },
+        {
+          icon: Flame,
+          color: 'text-orange-600 bg-orange-50',
+          title: 'Daily Streaks',
+          description: 'Complete tasks on consecutive days to build streaks! Track your current streak and longest streak ever. Earn achievements for 3, 7, 14, and 30-day streaks. Streaks display with celebration animations when you level up!'
+        },
+        {
+          icon: Layers,
+          color: 'text-blue-600 bg-blue-50',
+          title: 'Task Templates',
+          description: 'Save common task bundles like "Morning Routine" or "Saturday Chores" and deploy them with one click! No more creating the same tasks repeatedly. Parents can create system templates or custom templates.'
+        },
+        {
+          icon: Calendar,
+          color: 'text-purple-600 bg-purple-50',
+          title: 'Task History Calendar',
+          description: 'View a visual calendar showing all completed tasks. Filter by family member, click dates to see task details, and watch daily progress with color-coded point indicators. Perfect for tracking consistency!'
+        }
+      ]
+    },
     {
       version: '2.1.0',
       date: 'December 2024',
@@ -100,10 +130,12 @@ export default function WhatsNew() {
       <div className="mt-8 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl">
         <h4 className="font-bold text-gray-800 mb-2">Coming Soon</h4>
         <ul className="text-sm text-gray-600 space-y-1">
+          <li>• Enhanced reward system with tiers and redeemable items</li>
+          <li>• Advanced task filtering and sorting</li>
+          <li>• Weekly/monthly reports and analytics</li>
           <li>• Recurring task automation</li>
           <li>• Mobile app notifications</li>
-          <li>• Weekly/monthly reports</li>
-          <li>• Custom themes and colors</li>
+          <li>• Custom themes and avatars</li>
         </ul>
       </div>
     </div>

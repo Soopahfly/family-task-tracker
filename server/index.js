@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import db from './db.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { checkAchievements, getAchievementsWithProgress } from './achievementEngine.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -112,6 +113,97 @@ app.delete('/api/tasks/:id', (req, res) => {
   const { id } = req.params;
   db.prepare('DELETE FROM tasks WHERE id = ?').run(id);
   res.json({ success: true });
+});
+
+// Task completion endpoint with achievements, streaks, and history integration
+app.post('/api/tasks/:id/complete', (req, res) => {
+  const { id } = req.params;
+  const { family_member_id } = req.body;
+
+  if (!family_member_id) {
+    return res.status(400).json({ success: false, error: 'family_member_id is required' });
+  }
+
+  const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
+
+  if (!task) {
+    return res.status(404).json({ success: false, error: 'Task not found' });
+  }
+
+  const completedAt = new Date().toISOString();
+
+  // Update task status
+  db.prepare(`
+    UPDATE tasks SET status = 'completed', completed_at = ?, assigned_to = ?
+    WHERE id = ?
+  `).run(completedAt, family_member_id, id);
+
+  // Add points to family member
+  db.prepare('UPDATE family_members SET points = points + ? WHERE id = ?')
+    .run(task.points, family_member_id);
+
+  // Add to task history
+  const historyId = crypto.randomBytes(16).toString('hex');
+  db.prepare(`
+    INSERT INTO task_history (id, task_id, task_title, family_member_id, points_earned, completed_at, category, difficulty)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(historyId, task.id, task.title, family_member_id, task.points, completedAt, task.category, task.difficulty);
+
+  // Update streaks
+  const streakResult = db.prepare(`
+    SELECT * FROM streaks WHERE family_member_id = ? AND streak_type = 'daily'
+  `).get(family_member_id);
+
+  const today = new Date().toISOString().split('T')[0];
+  let newCurrentStreak = 1;
+  let newLongestStreak = 1;
+
+  if (streakResult) {
+    const lastDate = streakResult.last_completion_date;
+
+    if (lastDate) {
+      const lastDateObj = new Date(lastDate);
+      const todayObj = new Date(today);
+      const diffDays = Math.floor((todayObj - lastDateObj) / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 0) {
+        // Same day, no change to streak
+        newCurrentStreak = streakResult.current_streak;
+        newLongestStreak = streakResult.longest_streak;
+      } else if (diffDays === 1) {
+        // Consecutive day, increment streak
+        newCurrentStreak = streakResult.current_streak + 1;
+        newLongestStreak = Math.max(streakResult.longest_streak, newCurrentStreak);
+      } else {
+        // Streak broken, reset to 1
+        newCurrentStreak = 1;
+        newLongestStreak = streakResult.longest_streak;
+      }
+    }
+
+    db.prepare(`
+      UPDATE streaks
+      SET current_streak = ?, longest_streak = ?, last_completion_date = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE family_member_id = ? AND streak_type = 'daily'
+    `).run(newCurrentStreak, newLongestStreak, today, family_member_id);
+  } else {
+    // Create new streak
+    const streakId = crypto.randomBytes(16).toString('hex');
+    db.prepare(`
+      INSERT INTO streaks (id, family_member_id, streak_type, current_streak, longest_streak, last_completion_date)
+      VALUES (?, ?, 'daily', ?, ?, ?)
+    `).run(streakId, family_member_id, newCurrentStreak, newLongestStreak, today);
+  }
+
+  // Check for new achievements
+  const achievementResult = checkAchievements(family_member_id);
+
+  res.json({
+    success: true,
+    task: { ...task, status: 'completed', completed_at: completedAt },
+    streak: { current_streak: newCurrentStreak, longest_streak: newLongestStreak },
+    achievements: achievementResult
+  });
 });
 
 // Rewards endpoints
@@ -438,6 +530,224 @@ app.delete('/api/merits/:id', (req, res) => {
   }
 
   res.json({ success: true });
+});
+
+// ==================== STAGE 1: ACHIEVEMENTS & STREAKS ENDPOINTS ====================
+
+// Achievement endpoints
+app.get('/api/achievements', (req, res) => {
+  const achievements = db.prepare('SELECT * FROM achievements ORDER BY category, requirement_value').all();
+  res.json(achievements);
+});
+
+app.get('/api/achievements/:memberId', (req, res) => {
+  const { memberId } = req.params;
+  const achievementsWithProgress = getAchievementsWithProgress(memberId);
+  res.json(achievementsWithProgress);
+});
+
+app.post('/api/achievements/check/:memberId', (req, res) => {
+  const { memberId } = req.params;
+  const result = checkAchievements(memberId);
+  res.json(result);
+});
+
+// Streaks endpoints
+app.get('/api/streaks/:memberId', (req, res) => {
+  const { memberId } = req.params;
+  const streaks = db.prepare(`
+    SELECT * FROM streaks WHERE family_member_id = ?
+  `).all(memberId);
+
+  // Return all streak types, creating default if none exist
+  const streakTypes = ['daily', 'weekly'];
+  const streakMap = new Map(streaks.map(s => [s.streak_type, s]));
+
+  const result = streakTypes.map(type => {
+    if (streakMap.has(type)) {
+      return streakMap.get(type);
+    } else {
+      return {
+        streak_type: type,
+        current_streak: 0,
+        longest_streak: 0,
+        last_completion_date: null
+      };
+    }
+  });
+
+  res.json(result);
+});
+
+app.post('/api/streaks/update/:memberId', (req, res) => {
+  const { memberId } = req.params;
+  const { streak_type = 'daily' } = req.body;
+
+  // Get current streak
+  const currentStreak = db.prepare(`
+    SELECT * FROM streaks WHERE family_member_id = ? AND streak_type = ?
+  `).get(memberId, streak_type);
+
+  const today = new Date().toISOString().split('T')[0];
+  let newCurrentStreak = 1;
+  let newLongestStreak = 1;
+
+  if (currentStreak) {
+    const lastDate = currentStreak.last_completion_date;
+
+    if (lastDate) {
+      const lastDateObj = new Date(lastDate);
+      const todayObj = new Date(today);
+      const diffDays = Math.floor((todayObj - lastDateObj) / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 0) {
+        // Same day, no change
+        return res.json(currentStreak);
+      } else if (diffDays === 1) {
+        // Consecutive day, increment streak
+        newCurrentStreak = currentStreak.current_streak + 1;
+      } else {
+        // Streak broken, reset to 1
+        newCurrentStreak = 1;
+      }
+
+      newLongestStreak = Math.max(currentStreak.longest_streak, newCurrentStreak);
+    }
+
+    // Update existing streak
+    db.prepare(`
+      UPDATE streaks
+      SET current_streak = ?, longest_streak = ?, last_completion_date = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE family_member_id = ? AND streak_type = ?
+    `).run(newCurrentStreak, newLongestStreak, today, memberId, streak_type);
+  } else {
+    // Create new streak
+    const id = crypto.randomBytes(16).toString('hex');
+    db.prepare(`
+      INSERT INTO streaks (id, family_member_id, streak_type, current_streak, longest_streak, last_completion_date)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(id, memberId, streak_type, newCurrentStreak, newLongestStreak, today);
+  }
+
+  // Get updated streak
+  const updatedStreak = db.prepare(`
+    SELECT * FROM streaks WHERE family_member_id = ? AND streak_type = ?
+  `).get(memberId, streak_type);
+
+  res.json(updatedStreak);
+});
+
+// Task Templates endpoints
+app.get('/api/task-templates', (req, res) => {
+  const templates = db.prepare('SELECT * FROM task_templates ORDER BY created_at DESC').all();
+  res.json(templates.map(t => ({
+    ...t,
+    tasks: JSON.parse(t.tasks),
+    is_system: Boolean(t.is_system)
+  })));
+});
+
+app.post('/api/task-templates', (req, res) => {
+  const { id, name, description, tasks, created_by, is_system } = req.body;
+
+  if (!Array.isArray(tasks) || tasks.length === 0) {
+    return res.status(400).json({ success: false, error: 'Tasks must be a non-empty array' });
+  }
+
+  const stmt = db.prepare(`
+    INSERT INTO task_templates (id, name, description, tasks, created_by, is_system)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `);
+
+  stmt.run(id, name, description || null, JSON.stringify(tasks), created_by || null, is_system ? 1 : 0);
+
+  res.json({ id, name, description, tasks, created_by, is_system });
+});
+
+app.post('/api/task-templates/:id/deploy', (req, res) => {
+  const { id } = req.params;
+  const { assigned_to, created_by } = req.body;
+
+  const template = db.prepare('SELECT * FROM task_templates WHERE id = ?').get(id);
+
+  if (!template) {
+    return res.status(404).json({ success: false, error: 'Template not found' });
+  }
+
+  const tasks = JSON.parse(template.tasks);
+  const createdTasks = [];
+
+  for (const taskTemplate of tasks) {
+    const taskId = crypto.randomBytes(16).toString('hex');
+    const task = {
+      id: taskId,
+      title: taskTemplate.title,
+      description: taskTemplate.description || null,
+      points: taskTemplate.points || 10,
+      duration: taskTemplate.duration || null,
+      category: taskTemplate.category || 'chore',
+      difficulty: taskTemplate.difficulty || 'medium',
+      assigned_to: assigned_to || null,
+      created_by: created_by || null,
+      status: 'available',
+      deadline: taskTemplate.deadline || null,
+      deadline_type: taskTemplate.deadline_type || null,
+      created_by_kid: 0
+    };
+
+    const stmt = db.prepare(`
+      INSERT INTO tasks (id, title, description, points, duration, category, difficulty, assigned_to, created_by, status, deadline, deadline_type, created_by_kid)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(
+      task.id, task.title, task.description, task.points, task.duration,
+      task.category, task.difficulty, task.assigned_to, task.created_by,
+      task.status, task.deadline, task.deadline_type, task.created_by_kid
+    );
+
+    createdTasks.push(task);
+  }
+
+  res.json({ success: true, tasks: createdTasks });
+});
+
+app.delete('/api/task-templates/:id', (req, res) => {
+  const { id } = req.params;
+  db.prepare('DELETE FROM task_templates WHERE id = ?').run(id);
+  res.json({ success: true });
+});
+
+// Task History endpoints
+app.get('/api/task-history/:memberId', (req, res) => {
+  const { memberId } = req.params;
+  const { startDate, endDate } = req.query;
+
+  let query = 'SELECT * FROM task_history WHERE family_member_id = ?';
+  const params = [memberId];
+
+  if (startDate && endDate) {
+    query += ' AND DATE(completed_at) BETWEEN ? AND ?';
+    params.push(startDate, endDate);
+  }
+
+  query += ' ORDER BY completed_at DESC';
+
+  const history = db.prepare(query).all(...params);
+  res.json(history);
+});
+
+app.post('/api/task-history', (req, res) => {
+  const { id, task_id, task_title, family_member_id, points_earned, completed_at, category, difficulty } = req.body;
+
+  const stmt = db.prepare(`
+    INSERT INTO task_history (id, task_id, task_title, family_member_id, points_earned, completed_at, category, difficulty)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  stmt.run(id, task_id || null, task_title, family_member_id, points_earned, completed_at, category || null, difficulty || null);
+
+  res.json({ success: true, id });
 });
 
 // Serve static files in production
