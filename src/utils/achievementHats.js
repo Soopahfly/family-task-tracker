@@ -9,7 +9,7 @@
 function getTasksCompletedLast24Hours(tasks, memberId) {
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
   return tasks.filter(t =>
-    t.kidId === memberId &&
+    (t.kidId === memberId || t.assigned_to === memberId) &&
     t.completed &&
     t.completedAt &&
     new Date(t.completedAt) > oneDayAgo
@@ -20,7 +20,7 @@ function getTasksCompletedLast24Hours(tasks, memberId) {
  * Check if member has completed all core tasks assigned to them
  */
 function hasCompletedAllCoreTasks(tasks, memberId) {
-  const coreTasks = tasks.filter(t => t.kidId === memberId && t.taskType === 'core')
+  const coreTasks = tasks.filter(t => (t.kidId === memberId || t.assigned_to === memberId) && t.taskType === 'core')
   if (coreTasks.length === 0) return false
   return coreTasks.every(t => t.completed)
 }
@@ -37,7 +37,7 @@ function hasStreakOfDays(tasks, memberId, days = 7) {
     const endOfDay = new Date(checkDate.setHours(23, 59, 59, 999))
 
     const completedThatDay = tasks.filter(t =>
-      t.kidId === memberId &&
+      (t.kidId === memberId || t.assigned_to === memberId) &&
       t.completed &&
       t.completedAt &&
       new Date(t.completedAt) >= startOfDay &&
@@ -134,7 +134,7 @@ export function getAllMembersWithHats(familyMembers, tasks) {
 export function getLeaderboard(familyMembers, tasks) {
   return familyMembers.map(member => {
     const completedLast24h = getTasksCompletedLast24Hours(tasks, member.id)
-    const allTasks = tasks.filter(t => t.kidId === member.id)
+    const allTasks = tasks.filter(t => t.kidId === member.id || t.assigned_to === member.id)
     const completedTasks = allTasks.filter(t => t.completed).length
     const pendingTasks = allTasks.filter(t => !t.completed).length
 

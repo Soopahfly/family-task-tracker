@@ -53,10 +53,10 @@ export default function EnhancedDashboard({ familyMembers, tasks, setTasks, setF
       {/* Leaderboard Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {leaderboard.map((member, index) => {
-          const activeTasks = tasks.filter(t => t.kidId === member.id && !t.completed)
+          const activeTasks = tasks.filter(t => (t.kidId === member.id || t.assigned_to === member.id) && !t.completed)
           const coreTasksRemaining = activeTasks.filter(t => t.taskType === 'core').length
           const completedToday = tasks.filter(t =>
-            t.kidId === member.id &&
+            (t.kidId === member.id || t.assigned_to === member.id) &&
             t.completed &&
             t.completedAt &&
             new Date(t.completedAt).toDateString() === new Date().toDateString()
