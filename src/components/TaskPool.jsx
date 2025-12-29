@@ -25,7 +25,7 @@ export default function TaskPool({ familyMembers, tasks, setTasks }) {
   })
 
   // Filter tasks in pool (not assigned to anyone)
-  const poolTasks = tasks.filter(t => !t.claimedBy && !t.kidId && !t.completed)
+  const poolTasks = tasks.filter(t => !t.claimedBy && !t.kidId && !t.assigned_to && !t.completed)
   const coreTasks = poolTasks.filter(t => t.taskType === 'core')
   const optionalTasks = poolTasks.filter(t => t.taskType === 'optional')
 
@@ -50,6 +50,8 @@ export default function TaskPool({ familyMembers, tasks, setTasks }) {
       taskType: formData.taskType,
       claimedBy: null, // Starts in pool
       kidId: null,
+      assigned_to: null, // Server field name
+      status: 'available',
       completed: false,
       createdAt: new Date().toISOString(),
       deadline: formData.deadline || null
@@ -88,7 +90,7 @@ export default function TaskPool({ familyMembers, tasks, setTasks }) {
     if (!draggedTask) return
 
     // Check if member has completed all core tasks
-    const memberTasks = tasks.filter(t => t.kidId === memberId)
+    const memberTasks = tasks.filter(t => t.kidId === memberId || t.assigned_to === memberId)
     const incompleteCoreTask = memberTasks.find(t => t.taskType === 'core' && !t.completed)
 
     if (draggedTask.taskType === 'optional' && incompleteCoreTask) {
@@ -103,6 +105,7 @@ export default function TaskPool({ familyMembers, tasks, setTasks }) {
         ...draggedTask,
         kidId: memberId,
         claimedBy: memberId,
+        assigned_to: memberId, // Server field name
         claimedAt: new Date().toISOString()
       }
       await tasksAPI.update(draggedTask.id, updatedTask)
