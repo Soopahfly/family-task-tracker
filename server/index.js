@@ -73,24 +73,39 @@ app.get('/api/tasks', (req, res) => {
 });
 
 app.post('/api/tasks', (req, res) => {
-  const { id, title, description, points, duration, category, difficulty, assigned_to, created_by, status, deadline, deadline_type } = req.body;
+  const { id, title, description, points, duration, category, difficulty, assigned_to, created_by, status, deadline, deadline_type, created_by_kid } = req.body;
   const stmt = db.prepare(
-    `INSERT INTO tasks (id, title, description, points, duration, category, difficulty, assigned_to, created_by, status, deadline, deadline_type)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO tasks (id, title, description, points, duration, category, difficulty, assigned_to, created_by, status, deadline, deadline_type, created_by_kid)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   );
-  stmt.run(id, title, description, points, duration, category, difficulty, assigned_to, created_by, status || 'available', deadline, deadline_type);
+  stmt.run(id, title, description, points || 0, duration, category, difficulty, assigned_to, created_by, status || 'available', deadline, deadline_type, created_by_kid || 0);
   res.json(req.body);
 });
 
 app.put('/api/tasks/:id', (req, res) => {
   const { id } = req.params;
-  const { title, description, points, duration, category, difficulty, assigned_to, status, completed_at, deadline, deadline_type } = req.body;
+  const { title, description, points, duration, category, difficulty, assigned_to, status, completed_at, deadline, deadline_type, return_reason } = req.body;
   const stmt = db.prepare(
     `UPDATE tasks SET title = ?, description = ?, points = ?, duration = ?, category = ?, difficulty = ?,
-     assigned_to = ?, status = ?, completed_at = ?, deadline = ?, deadline_type = ? WHERE id = ?`
+     assigned_to = ?, status = ?, completed_at = ?, deadline = ?, deadline_type = ?, return_reason = ? WHERE id = ?`
   );
-  stmt.run(title, description, points, duration, category, difficulty, assigned_to, status, completed_at, deadline, deadline_type, id);
+  stmt.run(title, description, points, duration, category, difficulty, assigned_to, status, completed_at, deadline, deadline_type, return_reason, id);
   res.json(req.body);
+});
+
+app.post('/api/tasks/:id/return', (req, res) => {
+  const { id } = req.params;
+  const { return_reason } = req.body;
+
+  if (!return_reason || return_reason.trim().length === 0) {
+    return res.status(400).json({ success: false, error: 'Return reason is required' });
+  }
+
+  const stmt = db.prepare(
+    `UPDATE tasks SET status = 'available', assigned_to = NULL, return_reason = ? WHERE id = ?`
+  );
+  stmt.run(return_reason, id);
+  res.json({ success: true });
 });
 
 app.delete('/api/tasks/:id', (req, res) => {
@@ -317,6 +332,82 @@ app.post('/api/auth/remove-password', (req, res) => {
   }
 
   db.prepare('DELETE FROM settings WHERE key = ?').run('parentPassword');
+
+  res.json({ success: true });
+});
+
+// Merit Types endpoints
+app.get('/api/merit-types', (req, res) => {
+  const meritTypes = db.prepare('SELECT * FROM merit_types ORDER BY name').all();
+  res.json(meritTypes);
+});
+
+app.post('/api/merit-types', (req, res) => {
+  const { id, name, points, icon } = req.body;
+  const stmt = db.prepare(
+    'INSERT INTO merit_types (id, name, points, icon) VALUES (?, ?, ?, ?)'
+  );
+  stmt.run(id, name, points, icon || null);
+  res.json({ id, name, points, icon });
+});
+
+app.put('/api/merit-types/:id', (req, res) => {
+  const { id } = req.params;
+  const { name, points, icon } = req.body;
+  const stmt = db.prepare(
+    'UPDATE merit_types SET name = ?, points = ?, icon = ? WHERE id = ?'
+  );
+  stmt.run(name, points, icon, id);
+  res.json({ id, name, points, icon });
+});
+
+app.delete('/api/merit-types/:id', (req, res) => {
+  const { id } = req.params;
+  db.prepare('DELETE FROM merit_types WHERE id = ?').run(id);
+  res.json({ success: true });
+});
+
+// Merits endpoints
+app.get('/api/merits', (req, res) => {
+  const merits = db.prepare(`
+    SELECT m.*, mt.name as merit_name, mt.icon as merit_icon,
+           fm.name as family_member_name
+    FROM merits m
+    JOIN merit_types mt ON m.merit_type_id = mt.id
+    JOIN family_members fm ON m.family_member_id = fm.id
+    ORDER BY m.awarded_at DESC
+  `).all();
+  res.json(merits);
+});
+
+app.post('/api/merits', (req, res) => {
+  const { id, merit_type_id, family_member_id, note, points } = req.body;
+
+  // Insert merit
+  const stmt = db.prepare(
+    'INSERT INTO merits (id, merit_type_id, family_member_id, note, points) VALUES (?, ?, ?, ?, ?)'
+  );
+  stmt.run(id, merit_type_id, family_member_id, note || null, points);
+
+  // Update family member points
+  db.prepare('UPDATE family_members SET points = points + ? WHERE id = ?').run(points, family_member_id);
+
+  res.json({ id, merit_type_id, family_member_id, note, points });
+});
+
+app.delete('/api/merits/:id', (req, res) => {
+  const { id } = req.params;
+
+  // Get merit details before deleting to reverse points
+  const merit = db.prepare('SELECT * FROM merits WHERE id = ?').get(id);
+
+  if (merit) {
+    // Reverse the points
+    db.prepare('UPDATE family_members SET points = points - ? WHERE id = ?').run(merit.points, merit.family_member_id);
+
+    // Delete merit
+    db.prepare('DELETE FROM merits WHERE id = ?').run(id);
+  }
 
   res.json({ success: true });
 });

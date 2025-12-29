@@ -81,12 +81,47 @@ db.exec(`
     module_name TEXT PRIMARY KEY,
     enabled INTEGER DEFAULT 1
   );
+
+  CREATE TABLE IF NOT EXISTS merit_types (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    points INTEGER NOT NULL,
+    icon TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS merits (
+    id TEXT PRIMARY KEY,
+    merit_type_id TEXT NOT NULL,
+    family_member_id TEXT NOT NULL,
+    note TEXT,
+    points INTEGER NOT NULL,
+    awarded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (merit_type_id) REFERENCES merit_types(id),
+    FOREIGN KEY (family_member_id) REFERENCES family_members(id)
+  );
 `);
 
 // Migration: Add date_of_birth column if it doesn't exist
 try {
   db.exec(`ALTER TABLE family_members ADD COLUMN date_of_birth TEXT`);
   console.log('✅ Migration: Added date_of_birth column');
+} catch (e) {
+  // Column already exists
+}
+
+// Migration: Add return_reason column to tasks if it doesn't exist
+try {
+  db.exec(`ALTER TABLE tasks ADD COLUMN return_reason TEXT`);
+  console.log('✅ Migration: Added return_reason column');
+} catch (e) {
+  // Column already exists
+}
+
+// Migration: Add created_by_kid column to tasks if it doesn't exist
+try {
+  db.exec(`ALTER TABLE tasks ADD COLUMN created_by_kid INTEGER DEFAULT 0`);
+  console.log('✅ Migration: Added created_by_kid column');
 } catch (e) {
   // Column already exists
 }

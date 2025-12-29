@@ -10,5 +10,8 @@ export default defineConfig({
         changeOrigin: true,
       }
     }
+  },
+  define: {
+    'import.meta.env.VITE_BUILD_DATE': JSON.stringify(new Date().toISOString())
   }
 })

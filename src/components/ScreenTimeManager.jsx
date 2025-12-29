@@ -1,13 +1,22 @@
-// Screen Time Manager Component
-// Extracted from App.jsx for modularity
-
 import { useState } from 'react'
 import { Timer } from 'lucide-react'
+import { settingsAPI, familyMembersAPI } from '../utils/api'
 
-export default function ScreenTimeManager({ kids, setKids, settings, setSettings }) {
+function ScreenTimeManager({ familyMembers, setFamilyMembers, settings, setSettings }) {
+  const [selectedKid, setSelectedKid] = useState(null)
   const [minutesToRedeem, setMinutesToRedeem] = useState(30)
 
-  const handleRedeemScreenTime = (kid) => {
+  const handleSettingsChange = async (newSettings) => {
+    try {
+      await settingsAPI.update(newSettings)
+      setSettings(newSettings)
+    } catch (error) {
+      console.error('Failed to update settings:', error)
+      alert('Failed to update settings. Please try again.')
+    }
+  }
+
+  const handleRedeemScreenTime = async (kid) => {
     const pointsCost = minutesToRedeem * settings.pointsPerMinute
 
     if (kid.points < pointsCost) {
@@ -16,12 +25,22 @@ export default function ScreenTimeManager({ kids, setKids, settings, setSettings
     }
 
     if (confirm(`Redeem ${minutesToRedeem} minutes of screen time for ${kid.name}? This will cost ${pointsCost} points.`)) {
-      setKids(kids.map(k =>
-        k.id === kid.id
-          ? { ...k, points: k.points - pointsCost, screenTimeUsed: (k.screenTimeUsed || 0) + minutesToRedeem }
-          : k
-      ))
-      alert(`Success! ${kid.name} earned ${minutesToRedeem} minutes of screen time!`)
+      try {
+        const updatedKid = {
+          ...kid,
+          points: kid.points - pointsCost,
+          screenTimeUsed: (kid.screenTimeUsed || 0) + minutesToRedeem
+        }
+        await familyMembersAPI.update(kid.id, updatedKid)
+
+        setFamilyMembers(familyMembers.map(k =>
+          k.id === kid.id ? updatedKid : k
+        ))
+        alert(`Success! ${kid.name} earned ${minutesToRedeem} minutes of screen time!`)
+      } catch (error) {
+        console.error('Failed to redeem screen time:', error)
+        alert('Failed to redeem screen time. Please try again.')
+      }
     }
   }
 
@@ -41,7 +60,7 @@ export default function ScreenTimeManager({ kids, setKids, settings, setSettings
             min="1"
             max="10"
             value={settings.pointsPerMinute}
-            onChange={(e) => setSettings({ ...settings, pointsPerMinute: parseInt(e.target.value) })}
+            onChange={(e) => handleSettingsChange({ ...settings, pointsPerMinute: parseInt(e.target.value) })}
             className="px-4 py-2 rounded-lg border border-gray-300 w-24"
           />
           <span className="text-gray-600 text-sm">
@@ -77,10 +96,10 @@ export default function ScreenTimeManager({ kids, setKids, settings, setSettings
       </div>
 
       <div className="space-y-4">
-        {kids.length === 0 ? (
-          <p className="text-gray-400 italic text-center py-8">No kids added yet</p>
+        {familyMembers.length === 0 ? (
+          <p className="text-gray-400 italic text-center py-8">No family members added yet</p>
         ) : (
-          kids.map(kid => {
+          familyMembers.map(kid => {
             const pointsCost = minutesToRedeem * settings.pointsPerMinute
             const canAfford = kid.points >= pointsCost
             const availableMinutes = Math.floor(kid.points / settings.pointsPerMinute)
@@ -123,3 +142,5 @@ export default function ScreenTimeManager({ kids, setKids, settings, setSettings
     </div>
   )
 }
+
+export default ScreenTimeManager

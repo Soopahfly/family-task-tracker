@@ -4,13 +4,15 @@
 let passwordStatus = null;
 
 /**
- * Check if password is set up
+ * Check if password is set up (synchronous - uses cached value)
+ * Call loadPasswordStatus() first to ensure cache is up to date
  */
 export function isPasswordSet() {
   // Use cached status if available
   if (passwordStatus !== null) {
     return passwordStatus;
   }
+  // If not cached yet, assume no password (conservative default)
   return false;
 }
 

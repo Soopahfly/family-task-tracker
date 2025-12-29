@@ -1,3 +1,8 @@
+# ⚠️  CRITICAL: DO NOT MODIFY VOLUME CONFIGURATION BELOW ⚠️
+# Volume name MUST be: family-task-tracker_family-task-data
+# external: true MUST be set to use existing data
+# Changing this will cause DATA LOSS!
+
 version: '3.8'
 
 services:
@@ -7,8 +12,11 @@ services:
     ports:
       - "3000:80"
     restart: unless-stopped
+    environment:
+      - TZ=America/New_York
     volumes:
-      - family-task-data:/app/server/data
+      - family-task-tracker_family-task-data:/app/server/data  # ⚠️ DO NOT CHANGE
 
 volumes:
-  family-task-data:
+  family-task-tracker_family-task-data:
+    external: true  # ⚠️ CRITICAL: Uses existing volume with your data

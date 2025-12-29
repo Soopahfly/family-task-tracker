@@ -9,8 +9,13 @@ services:
     restart: unless-stopped
     environment:
       - TZ=America/New_York  # Change to your timezone
+    volumes:
+      - family-task-data:/app/server/data
     networks:
       - kids-tracker-network
+
+volumes:
+  family-task-data:
 
 networks:
   kids-tracker-network:

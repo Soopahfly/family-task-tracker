@@ -47,6 +47,10 @@ export const tasksAPI = {
   delete: (id) => apiCall(`/api/tasks/${id}`, {
     method: 'DELETE',
   }),
+  returnToPool: (id, return_reason) => apiCall(`/api/tasks/${id}/return`, {
+    method: 'POST',
+    body: JSON.stringify({ return_reason }),
+  }),
 };
 
 // Rewards
@@ -112,5 +116,33 @@ export const moduleStatesAPI = {
   update: (states) => apiCall('/api/module-states', {
     method: 'PUT',
     body: JSON.stringify(states),
+  }),
+};
+
+// Merit Types
+export const meritTypesAPI = {
+  getAll: () => apiCall('/api/merit-types'),
+  create: (meritType) => apiCall('/api/merit-types', {
+    method: 'POST',
+    body: JSON.stringify(meritType),
+  }),
+  update: (id, meritType) => apiCall(`/api/merit-types/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(meritType),
+  }),
+  delete: (id) => apiCall(`/api/merit-types/${id}`, {
+    method: 'DELETE',
+  }),
+};
+
+// Merits
+export const meritsAPI = {
+  getAll: () => apiCall('/api/merits'),
+  create: (merit) => apiCall('/api/merits', {
+    method: 'POST',
+    body: JSON.stringify(merit),
+  }),
+  delete: (id) => apiCall(`/api/merits/${id}`, {
+    method: 'DELETE',
   }),
 };

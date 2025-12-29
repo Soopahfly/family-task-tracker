@@ -1,9 +1,6 @@
-// Statistics Component
-// Extracted from App.jsx for modularity
-
 import { BarChart3 } from 'lucide-react'
 
-export default function Statistics({ kids, tasks }) {
+function Statistics({ familyMembers, tasks }) {
   const getKidStats = (kid) => {
     const kidTasks = tasks.filter(t => t.kidId === kid.id)
     const completed = kidTasks.filter(t => t.completed)
@@ -34,11 +31,11 @@ export default function Statistics({ kids, tasks }) {
         Statistics & Progress
       </h2>
 
-      {kids.length === 0 ? (
-        <p className="text-gray-400 italic text-center py-8">No kids added yet</p>
+      {familyMembers.length === 0 ? (
+        <p className="text-gray-400 italic text-center py-8">No family members added yet</p>
       ) : (
         <div className="space-y-6">
-          {kids.map(kid => {
+          {familyMembers.map(kid => {
             const stats = getKidStats(kid)
 
             return (
@@ -93,3 +90,5 @@ export default function Statistics({ kids, tasks }) {
     </div>
   )
 }
+
+export default Statistics
