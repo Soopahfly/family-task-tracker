@@ -336,6 +336,34 @@ app.post('/api/auth/remove-password', (req, res) => {
   res.json({ success: true });
 });
 
+// Emergency password reset - requires knowing a parent's name
+app.post('/api/auth/emergency-reset', (req, res) => {
+  const { parentName, newPassword } = req.body;
+
+  // Verify a parent with this name exists
+  const parent = db.prepare('SELECT * FROM family_members WHERE name = ? AND role = ?').get(parentName, 'parent');
+  if (!parent) {
+    return res.status(401).json({ success: false, error: 'Invalid credentials' });
+  }
+
+  if (!newPassword || newPassword.length < 4) {
+    return res.status(400).json({ success: false, error: 'Password must be at least 4 characters' });
+  }
+
+  // Hash new password
+  const hash = crypto.createHash('sha256').update(newPassword).digest('hex');
+
+  // Update or insert password
+  const existing = db.prepare('SELECT value FROM settings WHERE key = ?').get('parentPassword');
+  if (existing) {
+    db.prepare('UPDATE settings SET value = ? WHERE key = ?').run(hash, 'parentPassword');
+  } else {
+    db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run('parentPassword', hash);
+  }
+
+  res.json({ success: true, message: 'Password reset successfully' });
+});
+
 // Merit Types endpoints
 app.get('/api/merit-types', (req, res) => {
   const meritTypes = db.prepare('SELECT * FROM merit_types ORDER BY name').all();

@@ -23,7 +23,7 @@ import MeritManagement from './components/MeritManagement'
 import WhatsNew from './components/WhatsNew'
 import { getDefaultModuleStates } from './modules/moduleConfig'
 import { formatDeadline, getDeadlineColor } from './utils/notificationManager'
-import { isPasswordSet, verifyPassword, isSessionValid, logoutSession } from './utils/authManager'
+import { loadPasswordStatus, verifyPassword, isSessionValid, logoutSession } from './utils/authManager'
 import { runMigrations, needsMigration } from './utils/dataMigration'
 import { familyMembersAPI, tasksAPI, rewardsAPI, rewardSuggestionsAPI, settingsAPI, integrationsAPI, moduleStatesAPI, meritTypesAPI, meritsAPI } from './utils/api'
 
@@ -62,7 +62,7 @@ function App() {
           settingsAPI.get(),
           integrationsAPI.getAll(),
           moduleStatesAPI.get(),
-          isPasswordSet(),
+          loadPasswordStatus(),
           meritTypesAPI.getAll(),
           meritsAPI.getAll()
         ]);
