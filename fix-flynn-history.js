@@ -5,7 +5,7 @@ const db = new Database('./server/data/data.db');
 console.log('=== Adding Flynn\'s Task History ===\n');
 
 // Flynn's ID
-const flynnId = '1765925008441';
+const flynnId = '1765925777187';
 
 // Get Flynn's current points
 const flynn = db.prepare('SELECT points FROM family_members WHERE id = ?').get(flynnId);
