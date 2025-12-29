@@ -1,5 +1,5 @@
-const Database = require('better-sqlite3');
-const crypto = require('crypto');
+import Database from 'better-sqlite3';
+import crypto from 'crypto';
 const db = new Database('./server/data/family-tasks.db');
 
 console.log('=== Adding Flynn\'s Task History ===\n');
