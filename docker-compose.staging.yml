@@ -1,0 +1,22 @@
+# ⚠️  STAGING ENVIRONMENT - Safe for Testing ⚠️
+# This is a test instance running on port 3001
+# Uses a COPY of production data for safe testing
+# Changes here do NOT affect production
+
+version: '3.8'
+
+services:
+  family-task-tracker-staging:
+    image: ghcr.io/soopahfly/family-task-tracker:latest
+    container_name: family-task-tracker-staging
+    ports:
+      - "3001:80"  # Staging runs on port 3001
+    restart: unless-stopped
+    environment:
+      - TZ=America/New_York
+    volumes:
+      - family-task-tracker_staging-data:/app/server/data  # Separate staging volume
+
+volumes:
+  family-task-tracker_staging-data:
+    # Note: This volume will be created and populated with a copy of production data
