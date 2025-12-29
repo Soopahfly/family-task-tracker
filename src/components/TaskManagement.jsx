@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { ListTodo, Plus, X, Calendar } from 'lucide-react'
+import { ListTodo, Plus, X, Calendar, Filter } from 'lucide-react'
 import { tasksAPI } from '../utils/api'
 
 function TaskManagement({ familyMembers, tasks, setTasks }) {
   const [showForm, setShowForm] = useState(false)
+  const [filterMemberId, setFilterMemberId] = useState('all')
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -72,6 +73,13 @@ function TaskManagement({ familyMembers, tasks, setTasks }) {
     return colors[category] || colors.chore
   }
 
+  // Filter tasks by selected family member
+  const filteredTasks = filterMemberId === 'all'
+    ? tasks
+    : filterMemberId === 'unassigned'
+    ? tasks.filter(t => !t.assigned_to || t.assigned_to === '')
+    : tasks.filter(t => t.assigned_to === filterMemberId)
+
   return (
     <div className="bg-white rounded-2xl p-6">
       <div className="flex items-center justify-between mb-6">
@@ -83,6 +91,28 @@ function TaskManagement({ familyMembers, tasks, setTasks }) {
           <Plus size={20} />
           Add Task
         </button>
+      </div>
+
+      {/* Filter by Family Member */}
+      <div className="mb-6 flex items-center gap-3">
+        <Filter size={20} className="text-gray-600" />
+        <label className="font-semibold text-gray-700">Filter by:</label>
+        <select
+          value={filterMemberId}
+          onChange={(e) => setFilterMemberId(e.target.value)}
+          className="px-4 py-2 rounded-lg border-2 border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent font-semibold"
+        >
+          <option value="all">All Family Members</option>
+          {familyMembers.filter(m => m.role !== 'parent').map(member => (
+            <option key={member.id} value={member.id}>{member.name}</option>
+          ))}
+          <option value="unassigned">Unassigned</option>
+        </select>
+        {filterMemberId !== 'all' && (
+          <span className="text-sm text-gray-600">
+            ({filteredTasks.length} {filteredTasks.length === 1 ? 'task' : 'tasks'})
+          </span>
+        )}
       </div>
 
       {showForm && (
@@ -188,13 +218,13 @@ function TaskManagement({ familyMembers, tasks, setTasks }) {
       )}
 
       <div className="space-y-4">
-        {tasks.length === 0 ? (
+        {filteredTasks.length === 0 ? (
           <div className="text-center py-12 text-gray-400">
             <ListTodo size={64} className="mx-auto mb-4 opacity-50" />
-            <p>No tasks created yet. Click "Add Task" to get started!</p>
+            <p>{filterMemberId === 'all' ? 'No tasks created yet. Click "Add Task" to get started!' : 'No tasks found for this filter.'}</p>
           </div>
         ) : (
-          tasks.map(task => {
+          filteredTasks.map(task => {
             const assignedMember = familyMembers.find(k => k.id === task.assigned_to)
             const isRecurringTemplate = task.recurring && task.recurring !== 'none' && !task.recurring_parent_id
             const isRecurringInstance = task.recurring_parent_id !== null && task.recurring_parent_id !== undefined
