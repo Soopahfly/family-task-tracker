@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import crypto from 'crypto';
-const db = new Database('./server/data/family-tasks.db');
+const db = new Database('./server/data/data.db');
 
 console.log('=== Adding Flynn\'s Task History ===\n');
 
