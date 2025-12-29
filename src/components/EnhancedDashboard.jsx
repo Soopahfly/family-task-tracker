@@ -1,6 +1,6 @@
 import { Check, Star, Zap, Trophy, TrendingUp } from 'lucide-react'
 import { getLeaderboard } from '../utils/achievementHats'
-import { tasksAPI, familyMembersAPI } from '../utils/api'
+import { completeTask } from '../utils/api'
 
 /**
  * Enhanced Dashboard - Family Member Grid with Achievement Hats
@@ -14,28 +14,23 @@ export default function EnhancedDashboard({ familyMembers, tasks, setTasks, setF
     if (!task) return
 
     try {
-      const updatedTask = { ...task, completed: true, completedAt: new Date().toISOString() }
-      await tasksAPI.update(taskId, updatedTask)
+      // Use the proper completion endpoint that creates history, streaks, and achievements
+      await completeTask(taskId, kidId)
 
-      const updatedTasks = tasks.map(t =>
-        t.id === taskId ? updatedTask : t
-      )
+      // Remove the task from the active tasks list (it's now completed)
+      const updatedTasks = tasks.filter(t => t.id !== taskId)
       setTasks(updatedTasks)
 
-      // Award points
-      const updatedMembers = familyMembers.map(kid =>
-        kid.id === kidId
-          ? { ...kid, points: (kid.points || 0) + task.points }
-          : kid
+      // Update points in local state (backend already updated it)
+      const updatedMembers = familyMembers.map(member =>
+        member.id === kidId
+          ? { ...member, points: (member.points || 0) + task.points }
+          : member
       )
-
-      // Update the family member in the API
-      const updatedKid = updatedMembers.find(k => k.id === kidId)
-      if (updatedKid) {
-        await familyMembersAPI.update(kidId, updatedKid)
-      }
-
       setFamilyMembers(updatedMembers)
+
+      // Reload data to get updated streaks and achievements
+      window.location.reload()
     } catch (error) {
       console.error('Failed to complete task:', error)
       alert('Failed to complete task. Please try again.')

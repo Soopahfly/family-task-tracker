@@ -6,6 +6,18 @@ export default function WhatsNew() {
 
   const changelog = [
     {
+      version: '2.3.2',
+      date: 'December 2025',
+      changes: [
+        {
+          icon: Bug,
+          color: 'text-red-600 bg-red-50',
+          title: 'Task Completion History Fix',
+          description: 'Critical Fix: Task completions now properly create history records, update streaks, and award achievements. Parents completing tasks on behalf of kids will now correctly track all statistics and progress.'
+        }
+      ]
+    },
+    {
       version: '2.3.1',
       date: 'December 2025',
       changes: [
