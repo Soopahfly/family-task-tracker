@@ -15,10 +15,14 @@ export default function EnhancedDashboard({ familyMembers, tasks, setTasks, setF
 
     try {
       // Use the proper completion endpoint that creates history, streaks, and achievements
-      await completeTask(taskId, kidId)
+      const result = await completeTask(taskId, kidId)
 
-      // Remove the task from the active tasks list (it's now completed)
-      const updatedTasks = tasks.filter(t => t.id !== taskId)
+      // Update the task in the tasks list (mark as completed, don't remove it)
+      const updatedTasks = tasks.map(t =>
+        t.id === taskId
+          ? { ...t, completed: true, completedAt: result.task.completed_at, status: 'completed' }
+          : t
+      )
       setTasks(updatedTasks)
 
       // Update points in local state (backend already updated it)
