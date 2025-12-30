@@ -16,6 +16,37 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+// Password persistence protection - ensure password settings are never accidentally deleted
+// This middleware runs on every request to monitor critical settings
+let passwordCheckInterval = null;
+
+function ensurePasswordPersistence() {
+  try {
+    const password = db.prepare('SELECT value FROM settings WHERE key = ?').get('parentPassword');
+    const passwordBackup = db.prepare('SELECT value FROM settings WHERE key = ?').get('passwordBackup');
+
+    // If password exists but backup doesn't, create backup
+    if (password && !passwordBackup) {
+      db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)').run('passwordBackup', password.value);
+      console.log('🔐 Password backup created');
+    }
+
+    // If password is lost but backup exists, restore it
+    if (!password && passwordBackup) {
+      db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run('parentPassword', passwordBackup.value);
+      console.log('🔐 Password restored from backup!');
+    }
+  } catch (error) {
+    console.error('⚠️  Password persistence check failed:', error.message);
+  }
+}
+
+// Run password persistence check every 60 seconds
+passwordCheckInterval = setInterval(ensurePasswordPersistence, 60000);
+
+// Run once on startup
+ensurePasswordPersistence();
+
 // Helper function to calculate age from date of birth
 function calculateAge(dateOfBirth) {
   if (!dateOfBirth) return null;
@@ -365,6 +396,10 @@ app.post('/api/auth/setup-password', (req, res) => {
   const hash = crypto.createHash('sha256').update(password).digest('hex');
   db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run('parentPassword', hash);
 
+  // Create backup copy for persistence protection
+  db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('passwordBackup', hash);
+
+  console.log('🔐 Password set and backup created');
   res.json({ success: true });
 });
 
@@ -407,6 +442,10 @@ app.post('/api/auth/change-password', (req, res) => {
   const newHash = crypto.createHash('sha256').update(newPassword).digest('hex');
   db.prepare('UPDATE settings SET value = ? WHERE key = ?').run(newHash, 'parentPassword');
 
+  // Update backup as well
+  db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('passwordBackup', newHash);
+
+  console.log('🔐 Password changed and backup updated');
   res.json({ success: true });
 });
 
@@ -425,7 +464,10 @@ app.post('/api/auth/remove-password', (req, res) => {
   }
 
   db.prepare('DELETE FROM settings WHERE key = ?').run('parentPassword');
+  // Also delete backup when intentionally removing password
+  db.prepare('DELETE FROM settings WHERE key = ?').run('passwordBackup');
 
+  console.log('🔐 Password removed (backup also cleared)');
   res.json({ success: true });
 });
 
