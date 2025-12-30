@@ -1,10 +1,14 @@
 import { useState } from 'react'
 import { Users, Plus, X } from 'lucide-react'
 import { familyMembersAPI } from '../utils/api'
+import { verifyPassword } from '../utils/authManager'
 
 export default function KidsManagement({ familyMembers, setFamilyMembers, tasks }) {
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState({ name: '', age: '', date_of_birth: '', useDateOfBirth: false, color: '#FF6B6B', avatar: '', role: 'child' })
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [memberToDelete, setMemberToDelete] = useState(null)
+  const [deletePassword, setDeletePassword] = useState('')
 
   const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2']
 
@@ -47,16 +51,41 @@ export default function KidsManagement({ familyMembers, setFamilyMembers, tasks 
     }
   }
 
-  const handleDelete = async (kidId) => {
-    if (confirm('Are you sure you want to remove this kid? All their tasks will also be removed.')) {
-      try {
-        await familyMembersAPI.delete(kidId)
-        setFamilyMembers(familyMembers.filter(k => k.id !== kidId))
-      } catch (error) {
-        console.error('Failed to delete family member:', error)
-        alert('Failed to delete family member. Please try again.')
+  const handleDeleteClick = (kid) => {
+    setMemberToDelete(kid)
+    setShowDeleteConfirm(true)
+    setDeletePassword('')
+  }
+
+  const handleConfirmDelete = async (e) => {
+    e.preventDefault()
+
+    // Check if password is set and verify it
+    const hasPassword = localStorage.getItem('hasPassword') === 'true'
+    if (hasPassword) {
+      const isValid = await verifyPassword(deletePassword)
+      if (!isValid) {
+        alert('Incorrect password!')
+        return
       }
     }
+
+    try {
+      await familyMembersAPI.delete(memberToDelete.id)
+      setFamilyMembers(familyMembers.filter(k => k.id !== memberToDelete.id))
+      setShowDeleteConfirm(false)
+      setMemberToDelete(null)
+      setDeletePassword('')
+    } catch (error) {
+      console.error('Failed to delete family member:', error)
+      alert('Failed to delete family member. Please try again.')
+    }
+  }
+
+  const handleCancelDelete = () => {
+    setShowDeleteConfirm(false)
+    setMemberToDelete(null)
+    setDeletePassword('')
   }
 
   return (
@@ -244,7 +273,7 @@ export default function KidsManagement({ familyMembers, setFamilyMembers, tasks 
                   </div>
                 </div>
                 <button
-                  onClick={() => handleDelete(kid.id)}
+                  onClick={() => handleDeleteClick(kid)}
                   className="text-red-500 hover:bg-red-50 p-2 rounded-lg"
                 >
                   <X size={20} />
@@ -266,6 +295,64 @@ export default function KidsManagement({ familyMembers, setFamilyMembers, tasks 
         <div className="text-center py-12 text-gray-400">
           <Users size={64} className="mx-auto mb-4 opacity-50" />
           <p>No family members added yet. Click "Add Member" to get started!</p>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && memberToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-2xl font-bold text-red-600 mb-4">⚠️ Delete Family Member?</h3>
+            <p className="text-gray-700 mb-2">
+              Are you sure you want to remove <span className="font-bold">{memberToDelete.name}</span>?
+            </p>
+            <p className="text-sm text-gray-600 mb-4">
+              This will permanently delete:
+            </p>
+            <ul className="text-sm text-gray-600 mb-4 ml-6 list-disc">
+              <li>All their tasks ({tasks.filter(t => t.kidId === memberToDelete.id || t.assigned_to === memberToDelete.id).length} tasks)</li>
+              <li>Their points ({memberToDelete.points || 0} points)</li>
+              <li>Their achievements and progress</li>
+            </ul>
+            <p className="text-sm font-semibold text-red-600 mb-4">
+              ⚠️ This action cannot be undone!
+            </p>
+
+            <form onSubmit={handleConfirmDelete}>
+              {localStorage.getItem('hasPassword') === 'true' && (
+                <div className="mb-4">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Enter Password to Confirm
+                  </label>
+                  <input
+                    type="password"
+                    value={deletePassword}
+                    onChange={(e) => setDeletePassword(e.target.value)}
+                    required
+                    className="w-full px-4 py-2 rounded-lg border-2 border-red-300 focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    placeholder="Enter password"
+                    autoFocus
+                  />
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={handleCancelDelete}
+                  className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-3 rounded-lg font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg font-semibold"
+                >
+                  Delete
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

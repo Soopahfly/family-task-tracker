@@ -56,6 +56,14 @@ function KidView({ familyMembers, tasks, setTasks, rewards, rewardSuggestions, s
     return today === completedDate
   })
 
+  // Available tasks from the pool (not assigned to anyone, not completed)
+  const availableTasks = tasks.filter(t => !t.assigned_to && !t.completed)
+  const coreTasksAvailable = availableTasks.filter(t => t.taskType === 'core')
+  const optionalTasksAvailable = availableTasks.filter(t => t.taskType === 'optional')
+
+  // Check if kid has incomplete core tasks (blocks claiming optional tasks)
+  const hasIncompleteCoreTask = pendingTasks.some(t => t.taskType === 'core')
+
   const affordableRewards = rewards.filter(r => selectedKid.points >= r.pointsCost)
   const screenTimeAvailable = Math.floor(selectedKid.points / settings.pointsPerMinute)
 
@@ -82,6 +90,32 @@ function KidView({ familyMembers, tasks, setTasks, rewards, rewardSuggestions, s
     }
   }
 
+  const handleClaimTask = async (task) => {
+    // Check if trying to claim optional task while having incomplete core tasks
+    if (task.taskType === 'optional' && hasIncompleteCoreTask) {
+      alert('Complete all core tasks (⭐) before claiming optional tasks!')
+      return
+    }
+
+    try {
+      const updatedTask = {
+        ...task,
+        kidId: selectedKid.id,
+        assigned_to: selectedKid.id,
+        claimedBy: selectedKid.id,
+        claimedAt: new Date().toISOString()
+      }
+      await tasksAPI.update(task.id, updatedTask)
+
+      setTasks(tasks.map(t =>
+        t.id === task.id ? updatedTask : t
+      ))
+    } catch (error) {
+      console.error('Failed to claim task:', error)
+      alert('Failed to claim task. Please try again.')
+    }
+  }
+
   const handleReturnTask = async (reason) => {
     if (!taskToReturn) return
 
@@ -91,7 +125,7 @@ function KidView({ familyMembers, tasks, setTasks, rewards, rewardSuggestions, s
       // Update local state - remove task from kid's tasks
       setTasks(tasks.map(t =>
         t.id === taskToReturn.id
-          ? { ...t, kidId: null, claimedBy: null, status: 'available', return_reason: reason }
+          ? { ...t, kidId: null, assigned_to: null, claimedBy: null, status: 'available', return_reason: reason }
           : t
       ))
 
@@ -347,6 +381,72 @@ function KidView({ familyMembers, tasks, setTasks, rewards, rewardSuggestions, s
               </div>
             </form>
           )}
+        </div>
+      )}
+
+      {/* Available Tasks from Pool */}
+      {(coreTasksAvailable.length > 0 || optionalTasksAvailable.length > 0) && (
+        <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6 shadow-xl mb-6">
+          <h3 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <Star size={24} className="text-purple-600" />
+            Available Tasks - Click to Claim!
+          </h3>
+
+          {hasIncompleteCoreTask && optionalTasksAvailable.length > 0 && (
+            <div className="bg-yellow-100 border-2 border-yellow-400 rounded-lg p-3 mb-4 text-sm">
+              ⚠️ Complete all core tasks (⭐) before claiming optional tasks!
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {coreTasksAvailable.map(task => (
+              <div
+                key={task.id}
+                onClick={() => handleClaimTask(task)}
+                className="bg-gradient-to-br from-yellow-50 to-orange-50 p-4 rounded-xl border-2 border-yellow-300 cursor-pointer hover:shadow-lg hover:scale-105 transition-all"
+              >
+                <h4 className="font-bold text-lg text-gray-800 flex items-center gap-2">
+                  <Star className="text-yellow-500" size={20} />
+                  {task.title}
+                </h4>
+                {task.description && (
+                  <p className="text-gray-600 text-sm mt-1">{task.description}</p>
+                )}
+                <div className="flex items-center justify-between mt-3">
+                  <span className="bg-yellow-500 text-white px-3 py-1 rounded-full text-sm font-bold">
+                    +{task.points} pts
+                  </span>
+                  <span className="text-xs text-gray-600 bg-white px-2 py-1 rounded">
+                    ⭐ Core
+                  </span>
+                </div>
+              </div>
+            ))}
+            {optionalTasksAvailable.map(task => (
+              <div
+                key={task.id}
+                onClick={() => handleClaimTask(task)}
+                className={`bg-gradient-to-br from-purple-50 to-pink-50 p-4 rounded-xl border-2 border-purple-300 cursor-pointer transition-all ${
+                  hasIncompleteCoreTask
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'hover:shadow-lg hover:scale-105'
+                }`}
+              >
+                <h4 className="font-bold text-lg text-gray-800">{task.title}</h4>
+                {task.description && (
+                  <p className="text-gray-600 text-sm mt-1">{task.description}</p>
+                )}
+                <div className="flex items-center justify-between mt-3">
+                  <span className="bg-purple-600 text-white px-3 py-1 rounded-full text-sm font-bold">
+                    +{task.points} pts
+                  </span>
+                  <span className="text-xs text-gray-600 bg-white px-2 py-1 rounded">
+                    💫 Optional
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
