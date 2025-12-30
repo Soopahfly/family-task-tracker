@@ -244,18 +244,36 @@ function TaskManagement({ familyMembers, tasks, setTasks, setFamilyMembers }) {
   }
 
   // Filter tasks by selected family member
-  // Also filter out recurring templates (only show instances)
-  const nonTemplateTasks = tasks.filter(t => {
-    // Hide tasks that are recurring templates (recurring is set but no parent_id)
+  // Show recurring instances. For templates without today's instance, show the template itself
+  const visibleTasks = tasks.filter(t => {
+    // If it's a recurring instance (has parent_id), always show it
+    if (t.recurring_parent_id) {
+      return true
+    }
+
+    // If it's a template (recurring set, no parent_id)
     const isTemplate = t.recurring && t.recurring !== 'none' && !t.recurring_parent_id
-    return !isTemplate
+    if (isTemplate) {
+      // Check if there's an instance created today
+      const today = new Date().toISOString().split('T')[0]
+      const hasInstanceToday = tasks.some(task =>
+        task.recurring_parent_id === t.id &&
+        task.created_at &&
+        task.created_at.startsWith(today)
+      )
+      // Show template only if no instance exists for today
+      return !hasInstanceToday
+    }
+
+    // Regular non-recurring tasks - always show
+    return true
   })
 
   const filteredTasks = filterMemberId === 'all'
-    ? nonTemplateTasks
+    ? visibleTasks
     : filterMemberId === 'unassigned'
-    ? nonTemplateTasks.filter(t => !t.assigned_to || t.assigned_to === '')
-    : nonTemplateTasks.filter(t => t.assigned_to === filterMemberId)
+    ? visibleTasks.filter(t => !t.assigned_to || t.assigned_to === '')
+    : visibleTasks.filter(t => t.assigned_to === filterMemberId)
 
   return (
     <div className="bg-white rounded-2xl p-6">
