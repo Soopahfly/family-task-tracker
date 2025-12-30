@@ -25,10 +25,21 @@ dist-ssr
 *.sw?
 
 # Database
-server/data.db
-server/data.db-shm
-server/data.db-wal
+server/data/*.db
+server/data/*.db-shm
+server/data/*.db-wal
 
 # Environment variables
 .env
 .env.local
+
+# Diagnostic/temporary scripts (not for production)
+check-*.js
+fix-*.js
+verify-*.js
+list-*.js
+test-*.js
+add-*.js
+
+# Build info (auto-generated)
+public/build-info.json

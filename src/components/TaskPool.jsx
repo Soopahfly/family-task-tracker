@@ -25,7 +25,36 @@ export default function TaskPool({ familyMembers, tasks, setTasks }) {
   })
 
   // Filter tasks in pool (not assigned to anyone)
-  const poolTasks = tasks.filter(t => !t.claimedBy && !t.kidId && !t.assigned_to && !t.completed)
+  // Also filter out recurring templates if an instance exists today
+  const today = new Date().toISOString().split('T')[0]
+  const poolTasks = tasks.filter(t => {
+    // Must be unassigned and not completed
+    if (t.claimedBy || t.kidId || t.assigned_to || t.completed) {
+      return false
+    }
+
+    // If it's a recurring instance, show it
+    if (t.recurring_parent_id) {
+      return true
+    }
+
+    // If it's a recurring template
+    const isTemplate = t.recurring && t.recurring !== 'none' && !t.recurring_parent_id
+    if (isTemplate) {
+      // Check if there's an instance created today
+      const hasInstanceToday = tasks.some(task =>
+        task.recurring_parent_id === t.id &&
+        task.created_at &&
+        task.created_at.startsWith(today)
+      )
+      // Show template only if no instance exists for today
+      return !hasInstanceToday
+    }
+
+    // Regular non-recurring tasks - always show
+    return true
+  })
+
   const coreTasks = poolTasks.filter(t => t.taskType === 'core')
   const optionalTasks = poolTasks.filter(t => t.taskType === 'optional')
 
