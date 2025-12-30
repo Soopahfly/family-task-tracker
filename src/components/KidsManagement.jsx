@@ -213,7 +213,7 @@ export default function KidsManagement({ familyMembers, setFamilyMembers, tasks 
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {familyMembers.map(kid => {
-          const kidTasks = tasks.filter(t => t.kidId === kid.id)
+          const kidTasks = tasks.filter(t => t.kidId === kid.id || t.assigned_to === kid.id)
           const completedCount = kidTasks.filter(t => t.completed).length
 
           return (

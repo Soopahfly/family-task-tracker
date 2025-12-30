@@ -2,7 +2,7 @@ import { BarChart3 } from 'lucide-react'
 
 function Statistics({ familyMembers, tasks }) {
   const getKidStats = (kid) => {
-    const kidTasks = tasks.filter(t => t.kidId === kid.id)
+    const kidTasks = tasks.filter(t => t.kidId === kid.id || t.assigned_to === kid.id)
     const completed = kidTasks.filter(t => t.completed)
     const pending = kidTasks.filter(t => !t.completed)
 

@@ -358,7 +358,7 @@ function Dashboard({ familyMembers, tasks, setTasks, rewards, setFamilyMembers }
           const newPoints = (k.points || 0) + task.points
           // Check for streak
           const todaysTasks = updatedTasks.filter(t =>
-            t.kidId === kidId &&
+            (t.kidId === kidId || t.assigned_to === kidId) &&
             t.completed &&
             t.completedAt &&
             new Date(t.completedAt).toDateString() === new Date().toDateString()
@@ -430,7 +430,7 @@ function Dashboard({ familyMembers, tasks, setTasks, rewards, setFamilyMembers }
           <KidCard
             key={kid.id}
             kid={kid}
-            tasks={tasks.filter(t => t.kidId === kid.id)}
+            tasks={tasks.filter(t => t.kidId === kid.id || t.assigned_to === kid.id)}
             onCompleteTask={handleCompleteTask}
             onUncompleteTask={handleUncompleteTask}
           />

@@ -136,7 +136,7 @@ export default function TaskPool({ familyMembers, tasks, setTasks }) {
     if (!selectedTaskForAssign) return
 
     // Same core task check
-    const memberTasks = tasks.filter(t => t.kidId === memberId)
+    const memberTasks = tasks.filter(t => t.kidId === memberId || t.assigned_to === memberId)
     const incompleteCoreTask = memberTasks.find(t => t.taskType === 'core' && !t.completed)
 
     if (selectedTaskForAssign.taskType === 'optional' && incompleteCoreTask) {
@@ -308,7 +308,7 @@ export default function TaskPool({ familyMembers, tasks, setTasks }) {
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {familyMembers.map(member => {
-            const memberTasks = tasks.filter(t => t.kidId === member.id && !t.completed)
+            const memberTasks = tasks.filter(t => (t.kidId === member.id || t.assigned_to === member.id) && !t.completed)
             const coreTasksRemaining = memberTasks.filter(t => t.taskType === 'core').length
             const canClaimOptional = coreTasksRemaining === 0
 

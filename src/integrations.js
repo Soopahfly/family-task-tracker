@@ -7,7 +7,7 @@
  * @returns {string} - 'green', 'yellow', or 'red'
  */
 export function calculateTrafficLightStatus(kid, tasks) {
-  const kidTasks = tasks.filter(t => t.kidId === kid.id && !t.completed)
+  const kidTasks = tasks.filter(t => (t.kidId === kid.id || t.assigned_to === kid.id) && !t.completed)
 
   if (kidTasks.length === 0) {
     return 'green' // All tasks complete!

@@ -47,7 +47,7 @@ function KidView({ familyMembers, tasks, setTasks, rewards, rewardSuggestions, s
     )
   }
 
-  const myTasks = tasks.filter(t => t.kidId === selectedKid.id)
+  const myTasks = tasks.filter(t => t.kidId === selectedKid.id || t.assigned_to === selectedKid.id)
   const pendingTasks = myTasks.filter(t => !t.completed)
   const completedToday = myTasks.filter(t => {
     if (!t.completed || !t.completedAt) return false
