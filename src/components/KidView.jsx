@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Users, Star, Clock, Check, ListTodo, Gift, Lightbulb, X, Plus, Award } from 'lucide-react'
 import ReturnTaskDialog from './ReturnTaskDialog'
 import StreakDisplay from './StreakDisplay'
-import { rewardSuggestionsAPI, tasksAPI, meritsAPI, familyMembersAPI } from '../utils/api'
+import { rewardSuggestionsAPI, tasksAPI, meritsAPI, familyMembersAPI, completeTask } from '../utils/api'
 
 function KidView({ familyMembers, tasks, setTasks, rewards, rewardSuggestions, setRewardSuggestions, selectedKid, setSelectedKid, settings, meritTypes, setFamilyMembers, merits, setMerits }) {
   const [showSuggestionForm, setShowSuggestionForm] = useState(false)
@@ -87,6 +87,34 @@ function KidView({ familyMembers, tasks, setTasks, rewards, rewardSuggestions, s
     } catch (error) {
       console.error('Failed to create reward suggestion:', error)
       alert('Failed to send reward suggestion. Please try again.')
+    }
+  }
+
+  const handleCompleteTask = async (task) => {
+    try {
+      const result = await completeTask(task.id, selectedKid.id)
+
+      // Update the task in the tasks list
+      const updatedTasks = tasks.map(t =>
+        t.id === task.id
+          ? { ...t, completed: true, completedAt: result.task.completed_at, status: 'completed' }
+          : t
+      )
+      setTasks(updatedTasks)
+
+      // Update points in local state
+      const updatedMembers = familyMembers.map(member =>
+        member.id === selectedKid.id
+          ? { ...member, points: (member.points || 0) + task.points }
+          : member
+      )
+      setFamilyMembers(updatedMembers)
+
+      // Reload to get updated streaks and achievements
+      window.location.reload()
+    } catch (error) {
+      console.error('Failed to complete task:', error)
+      alert('Failed to complete task. Please try again.')
     }
   }
 
@@ -462,14 +490,23 @@ function KidView({ familyMembers, tasks, setTasks, rewards, rewardSuggestions, s
             ) : (
               pendingTasks.map(task => (
                 <div key={task.id} className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-xl border-2 border-purple-200 relative">
-                  <button
-                    onClick={() => setTaskToReturn(task)}
-                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-lg transition-colors"
-                    title="Can't do this task?"
-                  >
-                    <X size={16} />
-                  </button>
-                  <h4 className="font-bold text-lg text-gray-800 pr-8">{task.title}</h4>
+                  <div className="absolute top-2 right-2 flex gap-2">
+                    <button
+                      onClick={() => handleCompleteTask(task)}
+                      className="bg-green-500 hover:bg-green-600 text-white p-1.5 rounded-lg transition-colors"
+                      title="Mark as complete"
+                    >
+                      <Check size={16} />
+                    </button>
+                    <button
+                      onClick={() => setTaskToReturn(task)}
+                      className="bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-lg transition-colors"
+                      title="Can't do this task?"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                  <h4 className="font-bold text-lg text-gray-800 pr-20">{task.title}</h4>
                   {task.description && (
                     <p className="text-gray-600 text-sm mt-1">{task.description}</p>
                   )}

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Users, Trophy, ListTodo, TrendingUp, Timer, BarChart3, Zap, Database, Bell, Settings, Layers, Award, Sparkles, Star, Calendar, ChevronDown, Menu } from 'lucide-react'
+import { Users, Trophy, ListTodo, TrendingUp, Timer, BarChart3, Zap, Database, Bell, Settings, Layers, Award, Sparkles, Star, Calendar, ChevronDown, Menu, CheckCircle } from 'lucide-react'
 
 function NavigationGrouped({ activeView, setActiveView, rewardSuggestions, moduleStates }) {
   const [openDropdown, setOpenDropdown] = useState(null)
@@ -43,6 +43,7 @@ function NavigationGrouped({ activeView, setActiveView, rewardSuggestions, modul
         { id: 'tasks', label: 'All Tasks', icon: ListTodo },
         { id: 'templates', label: 'Templates', icon: Layers },
         { id: 'calendar', label: 'History', icon: Calendar },
+        { id: 'completedTasks', label: 'Completed Tasks', icon: CheckCircle },
       ]
     },
     {

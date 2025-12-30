@@ -24,6 +24,7 @@ import WhatsNew from './components/WhatsNew'
 import Achievements from './components/Achievements'
 import TaskTemplates from './components/TaskTemplates'
 import TaskCalendar from './components/TaskCalendar'
+import CompletedTasksManager from './components/CompletedTasksManager'
 import { getDefaultModuleStates } from './modules/moduleConfig'
 import { formatDeadline, getDeadlineColor } from './utils/notificationManager'
 import { loadPasswordStatus, verifyPassword, isSessionValid, logoutSession } from './utils/authManager'
@@ -321,6 +322,12 @@ function App() {
             {activeView === 'calendar' && (
               <ErrorBoundary sectionName="Task Calendar">
                 <TaskCalendar familyMembers={familyMembers} />
+              </ErrorBoundary>
+            )}
+
+            {activeView === 'completedTasks' && (
+              <ErrorBoundary sectionName="Completed Tasks Manager">
+                <CompletedTasksManager familyMembers={familyMembers} />
               </ErrorBoundary>
             )}
           </>
