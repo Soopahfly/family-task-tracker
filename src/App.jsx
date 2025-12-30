@@ -209,6 +209,7 @@ function App() {
                   familyMembers={familyMembers}
                   tasks={tasks}
                   setTasks={setTasks}
+                  setFamilyMembers={setFamilyMembers}
                 />
               </ErrorBoundary>
             )}

@@ -1,10 +1,34 @@
-import { Sparkles, Award, ListChecks, Shield, Code2, Package, Trophy, Flame, Calendar, Layers, RefreshCw, FolderTree, Bug, Users } from 'lucide-react'
+import { Sparkles, Award, ListChecks, Shield, Code2, Package, Trophy, Flame, Calendar, Layers, RefreshCw, FolderTree, Bug, Users, MousePointer2, CheckCircle } from 'lucide-react'
 import packageJson from '../../package.json'
 
 export default function WhatsNew() {
   const version = packageJson.version
 
   const changelog = [
+    {
+      version: '2.4.0',
+      date: 'December 2025',
+      changes: [
+        {
+          icon: MousePointer2,
+          color: 'text-indigo-600 bg-indigo-50',
+          title: 'Drag-and-Drop Task Assignment',
+          description: 'Drag tasks directly to family members to assign them! Hover cards appear for each family member - simply drag any task and drop it on a member\'s name. Much faster than using the dropdown menu for bulk task assignment.'
+        },
+        {
+          icon: CheckCircle,
+          color: 'text-green-600 bg-green-50',
+          title: 'Quick Task Completion with Flexible Points',
+          description: 'Complete tasks directly from the Task Management page! Click the green checkmark button, select who completed it, and optionally choose who receives the points (defaults to whoever completed it). Perfect for when parents help kids with tasks but want the kids to get credit. Creates full history, updates streaks, and awards achievements.'
+        },
+        {
+          icon: ListChecks,
+          color: 'text-blue-600 bg-blue-50',
+          title: 'Optional Task Assignment',
+          description: 'Task assignment is now optional when creating or editing tasks. Leave tasks unassigned in the pool and assign them later via drag-and-drop or the dropdown. Perfect for creating task templates to distribute later.'
+        }
+      ]
+    },
     {
       version: '2.3.4',
       date: 'December 2025',

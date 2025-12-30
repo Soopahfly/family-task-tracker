@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { ListTodo, Plus, X, Calendar, Filter, Edit2, Lock } from 'lucide-react'
-import { tasksAPI } from '../utils/api'
+import { ListTodo, Plus, X, Calendar, Filter, Edit2, Lock, CheckCircle } from 'lucide-react'
+import { tasksAPI, completeTask } from '../utils/api'
 import { verifyPassword } from '../utils/authManager'
 
-function TaskManagement({ familyMembers, tasks, setTasks }) {
+function TaskManagement({ familyMembers, tasks, setTasks, setFamilyMembers }) {
   const [showForm, setShowForm] = useState(false)
   const [editingTask, setEditingTask] = useState(null)
   const [showPasswordPrompt, setShowPasswordPrompt] = useState(false)
@@ -11,6 +11,11 @@ function TaskManagement({ familyMembers, tasks, setTasks }) {
   const [password, setPassword] = useState('')
   const [passwordError, setPasswordError] = useState('')
   const [filterMemberId, setFilterMemberId] = useState('all')
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false)
+  const [taskToComplete, setTaskToComplete] = useState(null)
+  const [selectedMemberId, setSelectedMemberId] = useState('')
+  const [pointsRecipientId, setPointsRecipientId] = useState('')
+  const [draggedTask, setDraggedTask] = useState(null)
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -130,6 +135,84 @@ function TaskManagement({ familyMembers, tasks, setTasks }) {
     }
   }
 
+  const handleCompleteClick = (task) => {
+    setTaskToComplete(task)
+    setSelectedMemberId('')
+    setPointsRecipientId('')
+    setShowCompleteDialog(true)
+  }
+
+  const handleCompleteTask = async () => {
+    if (!selectedMemberId) {
+      alert('Please select who completed this task')
+      return
+    }
+
+    // Use points recipient if specified, otherwise use the person who completed it
+    const recipientId = pointsRecipientId || selectedMemberId
+
+    try {
+      await completeTask(taskToComplete.id, recipientId)
+
+      // Update local state
+      const updatedTasks = tasks.filter(t => t.id !== taskToComplete.id)
+      setTasks(updatedTasks)
+
+      // Update points
+      const member = familyMembers.find(m => m.id === recipientId)
+      if (member && setFamilyMembers) {
+        const updatedMembers = familyMembers.map(m =>
+          m.id === recipientId
+            ? { ...m, points: (m.points || 0) + taskToComplete.points }
+            : m
+        )
+        setFamilyMembers(updatedMembers)
+      }
+
+      setShowCompleteDialog(false)
+      setTaskToComplete(null)
+      setSelectedMemberId('')
+      setPointsRecipientId('')
+
+      // Reload to get updated streaks/achievements
+      window.location.reload()
+    } catch (error) {
+      console.error('Failed to complete task:', error)
+      alert('Failed to complete task. Please try again.')
+    }
+  }
+
+  // Drag and drop handlers
+  const handleDragStart = (e, task) => {
+    setDraggedTask(task)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragOver = (e) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+  }
+
+  const handleDrop = async (e, memberId) => {
+    e.preventDefault()
+    if (!draggedTask) return
+
+    try {
+      const updatedTask = {
+        ...draggedTask,
+        assigned_to: memberId
+      }
+
+      await tasksAPI.update(draggedTask.id, updatedTask)
+      const updatedTasks = await tasksAPI.getAll()
+      setTasks(updatedTasks)
+      setDraggedTask(null)
+    } catch (error) {
+      console.error('Failed to assign task:', error)
+      alert('Failed to assign task. Please try again.')
+    }
+  }
+
   const getCategoryColor = (category) => {
     const colors = {
       chore: 'bg-blue-100 text-blue-800',
@@ -182,6 +265,24 @@ function TaskManagement({ familyMembers, tasks, setTasks }) {
         )}
       </div>
 
+      {/* Drag and Drop Assignment Zones */}
+      <div className="mb-6 p-4 bg-gray-50 rounded-xl">
+        <p className="text-sm font-semibold text-gray-700 mb-3">Drag tasks to assign:</p>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {familyMembers.map(member => (
+            <div
+              key={member.id}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, member.id)}
+              className="p-3 bg-white border-2 border-dashed border-gray-300 rounded-lg text-center hover:border-purple-400 hover:bg-purple-50 transition-colors cursor-pointer"
+            >
+              <p className="font-semibold text-gray-800">{member.name}</p>
+              <p className="text-xs text-gray-500">{member.role === 'parent' ? 'Parent' : 'Kid'}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-purple-50 p-6 rounded-xl mb-6">
           <h3 className="text-lg font-bold text-gray-800 mb-4">
@@ -200,14 +301,13 @@ function TaskManagement({ familyMembers, tasks, setTasks }) {
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Assign to Family Member</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Assign to Family Member (optional)</label>
               <select
-                required
                 value={formData.kidId}
                 onChange={(e) => setFormData({...formData, kidId: e.target.value})}
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
-                <option value="">Select a family member</option>
+                <option value="">Unassigned</option>
                 {familyMembers.filter(m => m.role === 'parent').length > 0 && (
                   <optgroup label="Parents">
                     {familyMembers.filter(m => m.role === 'parent').map(member => (
@@ -316,8 +416,10 @@ function TaskManagement({ familyMembers, tasks, setTasks }) {
             return (
               <div
                 key={task.id}
+                draggable={task.status !== 'completed'}
+                onDragStart={(e) => handleDragStart(e, task)}
                 className={`border-2 rounded-xl p-4 ${
-                  task.status === 'completed' ? 'bg-green-50 border-green-200' : 'border-gray-200'
+                  task.status === 'completed' ? 'bg-green-50 border-green-200' : 'border-gray-200 cursor-move'
                 }`}
               >
                 <div className="flex items-start justify-between">
@@ -362,6 +464,15 @@ function TaskManagement({ familyMembers, tasks, setTasks }) {
                     </div>
                   </div>
                   <div className="flex gap-2">
+                    {task.status !== 'completed' && (
+                      <button
+                        onClick={() => handleCompleteClick(task)}
+                        className="text-green-600 hover:bg-green-50 p-2 rounded-lg"
+                        title="Mark as complete"
+                      >
+                        <CheckCircle size={20} />
+                      </button>
+                    )}
                     <button
                       onClick={() => requestPasswordForEdit(task)}
                       className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg"
@@ -428,6 +539,98 @@ function TaskManagement({ familyMembers, tasks, setTasks }) {
                   setPassword('')
                   setPasswordError('')
                   setPasswordAction(null)
+                }}
+                className="px-6 bg-gray-200 text-gray-700 py-3 rounded-lg font-bold hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Complete Task Dialog */}
+      {showCompleteDialog && taskToComplete && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
+            <div className="text-center mb-6">
+              <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle size={32} className="text-green-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Complete Task</h2>
+              <p className="text-gray-600 mb-2">Who completed: <span className="font-bold">{taskToComplete.title}</span>?</p>
+              <p className="text-sm text-purple-600 font-semibold">+{taskToComplete.points} points</p>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Who completed this task?
+              </label>
+              <select
+                value={selectedMemberId}
+                onChange={(e) => setSelectedMemberId(e.target.value)}
+                autoFocus
+                className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              >
+                <option value="">Choose who completed this...</option>
+                {familyMembers.filter(m => m.role === 'parent').length > 0 && (
+                  <optgroup label="Parents">
+                    {familyMembers.filter(m => m.role === 'parent').map(member => (
+                      <option key={member.id} value={member.id}>{member.name}</option>
+                    ))}
+                  </optgroup>
+                )}
+                {familyMembers.filter(m => m.role !== 'parent').length > 0 && (
+                  <optgroup label="Kids">
+                    {familyMembers.filter(m => m.role !== 'parent').map(member => (
+                      <option key={member.id} value={member.id}>{member.name}</option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Who gets the points? (optional - defaults to who completed it)
+              </label>
+              <select
+                value={pointsRecipientId}
+                onChange={(e) => setPointsRecipientId(e.target.value)}
+                className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              >
+                <option value="">Same as who completed it</option>
+                {familyMembers.filter(m => m.role === 'parent').length > 0 && (
+                  <optgroup label="Parents">
+                    {familyMembers.filter(m => m.role === 'parent').map(member => (
+                      <option key={member.id} value={member.id}>{member.name}</option>
+                    ))}
+                  </optgroup>
+                )}
+                {familyMembers.filter(m => m.role !== 'parent').length > 0 && (
+                  <optgroup label="Kids">
+                    {familyMembers.filter(m => m.role !== 'parent').map(member => (
+                      <option key={member.id} value={member.id}>{member.name}</option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleCompleteTask}
+                disabled={!selectedMemberId}
+                className="flex-1 bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                Complete Task
+              </button>
+              <button
+                onClick={() => {
+                  setShowCompleteDialog(false)
+                  setTaskToComplete(null)
+                  setSelectedMemberId('')
+                  setPointsRecipientId('')
                 }}
                 className="px-6 bg-gray-200 text-gray-700 py-3 rounded-lg font-bold hover:bg-gray-300 transition-colors"
               >
