@@ -162,13 +162,71 @@ app.post('/api/tasks/:id/complete', (req, res) => {
     return res.status(404).json({ success: false, error: 'Task not found' });
   }
 
-  const completedAt = new Date().toISOString();
+  // IMPORTANT: If this is a recurring template (not an instance), create an instance and complete that instead
+  // Recurring templates should never be marked as completed themselves
+  if (task.recurring && task.recurring !== 'none' && !task.recurring_parent_id) {
+    console.log(`⚠️  Attempted to complete recurring template: ${task.title}`);
+    console.log(`   Creating instance instead...`);
 
-  // Update task status
-  db.prepare(`
-    UPDATE tasks SET status = 'completed', completed_at = ?, assigned_to = ?
-    WHERE id = ?
-  `).run(completedAt, family_member_id, id);
+    // Check if instance already exists today
+    const today = new Date().toISOString().split('T')[0];
+    const existingInstance = db.prepare(`
+      SELECT * FROM tasks
+      WHERE recurring_parent_id = ?
+      AND DATE(created_at) = ?
+    `).get(task.id, today);
+
+    let instanceToComplete;
+
+    if (existingInstance) {
+      // Use existing instance
+      instanceToComplete = existingInstance;
+      console.log(`   Found existing instance: ${existingInstance.id}`);
+    } else {
+      // Create new instance
+      const newInstanceId = crypto.randomBytes(16).toString('hex');
+      const now = new Date().toISOString();
+
+      db.prepare(`
+        INSERT INTO tasks (
+          id, title, description, points, duration, category, difficulty,
+          assigned_to, created_by, status, completed_at, deadline, deadline_type,
+          created_by_kid, recurring, recurring_parent_id, created_at, taskType
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        newInstanceId, task.title, task.description, task.points, task.duration,
+        task.category, task.difficulty, family_member_id, task.created_by, 'available',
+        null, task.deadline, task.deadline_type, task.created_by_kid, 'none',
+        task.id, now, task.taskType
+      );
+
+      instanceToComplete = db.prepare('SELECT * FROM tasks WHERE id = ?').get(newInstanceId);
+      console.log(`   Created new instance: ${newInstanceId}`);
+    }
+
+    // Now complete the instance (not the template)
+    const completedAt = new Date().toISOString();
+    db.prepare(`
+      UPDATE tasks SET status = 'completed', completed_at = ?, assigned_to = ?
+      WHERE id = ?
+    `).run(completedAt, family_member_id, instanceToComplete.id);
+
+    // Continue with the instance as the task
+    // Update the task variable for the rest of the function
+    task.id = instanceToComplete.id;
+  } else {
+    // Normal task or instance - complete it normally
+    const completedAt = new Date().toISOString();
+
+    // Update task status
+    db.prepare(`
+      UPDATE tasks SET status = 'completed', completed_at = ?, assigned_to = ?
+      WHERE id = ?
+    `).run(completedAt, family_member_id, id);
+  }
+
+  const completedAt = new Date().toISOString();
 
   // Add points to family member
   db.prepare('UPDATE family_members SET points = points + ? WHERE id = ?')

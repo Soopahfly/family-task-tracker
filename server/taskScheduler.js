@@ -57,10 +57,11 @@ function previousInstanceCompleted(parentTaskId) {
     LIMIT 1
   `).get(parentTaskId, today);
 
-  // If no previous instance exists, the parent task itself must be completed
+  // If no previous instance exists, allow creation (first time)
+  // NOTE: Recurring templates should never be marked as completed themselves
+  // Only instances get completed
   if (!previousInstance) {
-    const parentTask = db.prepare('SELECT * FROM tasks WHERE id = ?').get(parentTaskId);
-    return parentTask && parentTask.status === 'completed';
+    return true;
   }
 
   // Check if previous instance is completed
@@ -102,16 +103,17 @@ function createTaskInstance(parentTask) {
     deadline_type: parentTask.deadline_type,
     created_by_kid: parentTask.created_by_kid,
     recurring: 'none', // Instance tasks are not themselves recurring
-    recurring_parent_id: parentTask.id
+    recurring_parent_id: parentTask.id,
+    taskType: parentTask.taskType || 'optional'
   };
 
   const stmt = db.prepare(`
     INSERT INTO tasks (
       id, title, description, points, duration, category, difficulty,
       assigned_to, created_by, status, completed_at, deadline, deadline_type,
-      created_by_kid, recurring, recurring_parent_id, created_at
+      created_by_kid, recurring, recurring_parent_id, created_at, taskType
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   stmt.run(
@@ -131,7 +133,8 @@ function createTaskInstance(parentTask) {
     newTask.created_by_kid,
     newTask.recurring,
     newTask.recurring_parent_id,
-    now
+    now,
+    newTask.taskType
   );
 
   console.log(`✅ Created recurring task instance: ${newTask.title} (${newTaskId})`);
