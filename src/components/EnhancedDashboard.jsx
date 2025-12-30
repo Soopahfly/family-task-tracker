@@ -52,10 +52,39 @@ export default function EnhancedDashboard({ familyMembers, tasks, setTasks, setF
       {/* Leaderboard Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {leaderboard.map((member, index) => {
-          const activeTasks = tasks.filter(t => (t.kidId === member.id || t.assigned_to === member.id) && !t.completed)
+          // Filter tasks to show only relevant ones (hide recurring templates if instance exists today)
+          const today = new Date().toISOString().split('T')[0]
+          const visibleTasks = tasks.filter(t => {
+            // Must be assigned to this member
+            if (t.kidId !== member.id && t.assigned_to !== member.id) {
+              return false
+            }
+
+            // If it's a recurring instance, always show it
+            if (t.recurring_parent_id) {
+              return true
+            }
+
+            // If it's a recurring template
+            const isTemplate = t.recurring && t.recurring !== 'none' && !t.recurring_parent_id
+            if (isTemplate) {
+              // Check if there's an instance created today
+              const hasInstanceToday = tasks.some(task =>
+                task.recurring_parent_id === t.id &&
+                task.created_at &&
+                task.created_at.startsWith(today)
+              )
+              // Show template only if no instance exists for today
+              return !hasInstanceToday
+            }
+
+            // Regular non-recurring tasks - always show
+            return true
+          })
+
+          const activeTasks = visibleTasks.filter(t => !t.completed)
           const coreTasksRemaining = activeTasks.filter(t => t.taskType === 'core').length
-          const completedToday = tasks.filter(t =>
-            (t.kidId === member.id || t.assigned_to === member.id) &&
+          const completedToday = visibleTasks.filter(t =>
             t.completed &&
             t.completedAt &&
             new Date(t.completedAt).toDateString() === new Date().toDateString()
