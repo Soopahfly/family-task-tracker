@@ -200,17 +200,28 @@ function TaskManagement({ familyMembers, tasks, setTasks }) {
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Assign to Kid</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Assign to Family Member</label>
               <select
                 required
                 value={formData.kidId}
                 onChange={(e) => setFormData({...formData, kidId: e.target.value})}
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
-                <option value="">Select a kid</option>
-                {familyMembers.map(kid => (
-                  <option key={kid.id} value={kid.id}>{kid.name}</option>
-                ))}
+                <option value="">Select a family member</option>
+                {familyMembers.filter(m => m.role === 'parent').length > 0 && (
+                  <optgroup label="Parents">
+                    {familyMembers.filter(m => m.role === 'parent').map(member => (
+                      <option key={member.id} value={member.id}>{member.name}</option>
+                    ))}
+                  </optgroup>
+                )}
+                {familyMembers.filter(m => m.role !== 'parent').length > 0 && (
+                  <optgroup label="Kids">
+                    {familyMembers.filter(m => m.role !== 'parent').map(member => (
+                      <option key={member.id} value={member.id}>{member.name}</option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
             </div>
           </div>

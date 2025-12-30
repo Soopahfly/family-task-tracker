@@ -1,10 +1,22 @@
-import { Sparkles, Award, ListChecks, Shield, Code2, Package, Trophy, Flame, Calendar, Layers, RefreshCw, FolderTree, Bug } from 'lucide-react'
+import { Sparkles, Award, ListChecks, Shield, Code2, Package, Trophy, Flame, Calendar, Layers, RefreshCw, FolderTree, Bug, Users } from 'lucide-react'
 import packageJson from '../../package.json'
 
 export default function WhatsNew() {
   const version = packageJson.version
 
   const changelog = [
+    {
+      version: '2.3.4',
+      date: 'December 2025',
+      changes: [
+        {
+          icon: Users,
+          color: 'text-purple-600 bg-purple-50',
+          title: 'Grouped Family Member Selection',
+          description: 'Task assignment dropdown now groups family members by role (Parents and Kids). Updated labels from "Assign to Kid" to "Assign to Family Member" for clarity when assigning tasks to parents or children.'
+        }
+      ]
+    },
     {
       version: '2.3.3',
       date: 'December 2025',
