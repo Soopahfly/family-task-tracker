@@ -62,6 +62,7 @@ function TaskManagement({ familyMembers, tasks, setTasks, setFamilyMembers }) {
       description: task.description || '',
       points: task.points,
       kidId: task.assigned_to || '',
+      assignedMembers: [],
       category: task.category,
       recurring: task.recurring || 'none'
     })
