@@ -1,10 +1,28 @@
-import { Sparkles, Award, ListChecks, Shield, Code2, Package, Trophy, Flame, Calendar, Layers, RefreshCw, FolderTree, Bug, Users, MousePointer2, CheckCircle } from 'lucide-react'
+import { Sparkles, Award, ListChecks, Shield, Code2, Package, Trophy, Flame, Calendar, Layers, RefreshCw, FolderTree, Bug, Users, MousePointer2, CheckCircle, UserPlus, EyeOff } from 'lucide-react'
 import packageJson from '../../package.json'
 
 export default function WhatsNew() {
   const version = packageJson.version
 
   const changelog = [
+    {
+      version: '2.5.0',
+      date: 'December 2025',
+      changes: [
+        {
+          icon: UserPlus,
+          color: 'text-teal-600 bg-teal-50',
+          title: 'Multi-Member Task Assignment',
+          description: 'Assign one task to multiple family members at once! Perfect for shared responsibilities like "Brush Teeth" - both kids can complete the same task independently and each earns their own points. Select multiple members using checkboxes when creating tasks. The app automatically creates separate instances for each person.'
+        },
+        {
+          icon: EyeOff,
+          color: 'text-gray-600 bg-gray-50',
+          title: 'Hidden Recurring Templates',
+          description: 'Recurring task templates (Daily, Weekly, Monthly) no longer clutter the main task list. Only active instances are shown, making the task view cleaner and easier to navigate. Templates automatically spawn new instances at midnight.'
+        }
+      ]
+    },
     {
       version: '2.4.0',
       date: 'December 2025',

@@ -21,6 +21,7 @@ function TaskManagement({ familyMembers, tasks, setTasks, setFamilyMembers }) {
     description: '',
     points: 10,
     kidId: '',
+    assignedMembers: [],
     category: 'chore',
     recurring: 'none'
   })
@@ -86,7 +87,7 @@ function TaskManagement({ familyMembers, tasks, setTasks, setFamilyMembers }) {
         await tasksAPI.update(editingTask.id, updatedTask)
         const updatedTasks = await tasksAPI.getAll()
         setTasks(updatedTasks)
-        setFormData({ title: '', description: '', points: 10, kidId: '', category: 'chore', recurring: 'none' })
+        setFormData({ title: '', description: '', points: 10, kidId: '', assignedMembers: [], category: 'chore', recurring: 'none' })
         setShowForm(false)
         setEditingTask(null)
       } catch (error) {
@@ -94,15 +95,13 @@ function TaskManagement({ familyMembers, tasks, setTasks, setFamilyMembers }) {
         alert('Failed to update task. Please try again.')
       }
     } else {
-      // Create new task
-      const newTask = {
-        id: Date.now().toString(),
+      // Create new task(s)
+      const baseTask = {
         title: formData.title,
         description: formData.description,
         points: parseInt(formData.points),
         category: formData.category,
         difficulty: 'medium',
-        assigned_to: formData.kidId || null,
         created_by: null,
         status: 'available',
         recurring: formData.recurring,
@@ -111,10 +110,31 @@ function TaskManagement({ familyMembers, tasks, setTasks, setFamilyMembers }) {
       }
 
       try {
-        await tasksAPI.create(newTask)
+        // If multiple members selected, create one task per member
+        if (formData.assignedMembers.length > 0) {
+          for (const memberId of formData.assignedMembers) {
+            const newTask = {
+              ...baseTask,
+              id: Date.now().toString() + '_' + memberId,
+              assigned_to: memberId
+            }
+            await tasksAPI.create(newTask)
+            // Small delay to ensure unique timestamps
+            await new Promise(resolve => setTimeout(resolve, 10))
+          }
+        } else {
+          // No members selected - create single unassigned task
+          const newTask = {
+            ...baseTask,
+            id: Date.now().toString(),
+            assigned_to: null
+          }
+          await tasksAPI.create(newTask)
+        }
+
         const updatedTasks = await tasksAPI.getAll()
         setTasks(updatedTasks)
-        setFormData({ title: '', description: '', points: 10, kidId: '', category: 'chore', recurring: 'none' })
+        setFormData({ title: '', description: '', points: 10, kidId: '', assignedMembers: [], category: 'chore', recurring: 'none' })
         setShowForm(false)
       } catch (error) {
         console.error('Failed to create task:', error)
@@ -224,11 +244,18 @@ function TaskManagement({ familyMembers, tasks, setTasks, setFamilyMembers }) {
   }
 
   // Filter tasks by selected family member
+  // Also filter out recurring templates (only show instances)
+  const nonTemplateTasks = tasks.filter(t => {
+    // Hide tasks that are recurring templates (recurring is set but no parent_id)
+    const isTemplate = t.recurring && t.recurring !== 'none' && !t.recurring_parent_id
+    return !isTemplate
+  })
+
   const filteredTasks = filterMemberId === 'all'
-    ? tasks
+    ? nonTemplateTasks
     : filterMemberId === 'unassigned'
-    ? tasks.filter(t => !t.assigned_to || t.assigned_to === '')
-    : tasks.filter(t => t.assigned_to === filterMemberId)
+    ? nonTemplateTasks.filter(t => !t.assigned_to || t.assigned_to === '')
+    : nonTemplateTasks.filter(t => t.assigned_to === filterMemberId)
 
   return (
     <div className="bg-white rounded-2xl p-6">
@@ -301,28 +328,54 @@ function TaskManagement({ familyMembers, tasks, setTasks, setFamilyMembers }) {
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Assign to Family Member (optional)</label>
-              <select
-                value={formData.kidId}
-                onChange={(e) => setFormData({...formData, kidId: e.target.value})}
-                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              >
-                <option value="">Unassigned</option>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Assign to Family Members (optional - select multiple)</label>
+              <div className="border border-gray-300 rounded-lg p-3 max-h-48 overflow-y-auto bg-white">
                 {familyMembers.filter(m => m.role === 'parent').length > 0 && (
-                  <optgroup label="Parents">
+                  <div className="mb-2">
+                    <p className="text-xs font-semibold text-gray-500 mb-1">PARENTS</p>
                     {familyMembers.filter(m => m.role === 'parent').map(member => (
-                      <option key={member.id} value={member.id}>{member.name}</option>
+                      <label key={member.id} className="flex items-center gap-2 py-1 hover:bg-gray-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.assignedMembers.includes(member.id)}
+                          onChange={(e) => {
+                            const newMembers = e.target.checked
+                              ? [...formData.assignedMembers, member.id]
+                              : formData.assignedMembers.filter(id => id !== member.id)
+                            setFormData({...formData, assignedMembers: newMembers})
+                          }}
+                          className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                        />
+                        <span className="text-sm font-medium text-gray-700">{member.name}</span>
+                      </label>
                     ))}
-                  </optgroup>
+                  </div>
                 )}
                 {familyMembers.filter(m => m.role !== 'parent').length > 0 && (
-                  <optgroup label="Kids">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 mb-1">KIDS</p>
                     {familyMembers.filter(m => m.role !== 'parent').map(member => (
-                      <option key={member.id} value={member.id}>{member.name}</option>
+                      <label key={member.id} className="flex items-center gap-2 py-1 hover:bg-gray-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.assignedMembers.includes(member.id)}
+                          onChange={(e) => {
+                            const newMembers = e.target.checked
+                              ? [...formData.assignedMembers, member.id]
+                              : formData.assignedMembers.filter(id => id !== member.id)
+                            setFormData({...formData, assignedMembers: newMembers})
+                          }}
+                          className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                        />
+                        <span className="text-sm font-medium text-gray-700">{member.name}</span>
+                      </label>
                     ))}
-                  </optgroup>
+                  </div>
                 )}
-              </select>
+                {formData.assignedMembers.length === 0 && (
+                  <p className="text-sm text-gray-400 italic">No members selected - task will be unassigned</p>
+                )}
+              </div>
             </div>
           </div>
 
@@ -392,7 +445,7 @@ function TaskManagement({ familyMembers, tasks, setTasks, setFamilyMembers }) {
               onClick={() => {
                 setShowForm(false)
                 setEditingTask(null)
-                setFormData({ title: '', description: '', points: 10, kidId: '', category: 'chore', recurring: 'none' })
+                setFormData({ title: '', description: '', points: 10, kidId: '', assignedMembers: [], category: 'chore', recurring: 'none' })
               }}
               className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:bg-gray-400"
             >
