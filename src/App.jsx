@@ -72,7 +72,15 @@ function App() {
 
         // Only set data if the API call succeeded
         if (membersData.status === 'fulfilled') setFamilyMembers(membersData.value);
-        if (tasksData.status === 'fulfilled') setTasks(tasksData.value);
+        if (tasksData.status === 'fulfilled') {
+          // Transform tasks: map completed_at to completed boolean for frontend compatibility
+          const transformedTasks = tasksData.value.map(t => ({
+            ...t,
+            completed: !!t.completed_at,
+            completedAt: t.completed_at
+          }));
+          setTasks(transformedTasks);
+        }
         if (rewardsData.status === 'fulfilled') setRewards(rewardsData.value);
         if (suggestionsData.status === 'fulfilled') setRewardSuggestions(suggestionsData.value);
         if (settingsData.status === 'fulfilled') {

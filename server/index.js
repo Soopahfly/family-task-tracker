@@ -75,23 +75,23 @@ app.get('/api/tasks', (req, res) => {
 });
 
 app.post('/api/tasks', (req, res) => {
-  const { id, title, description, points, duration, category, difficulty, assigned_to, created_by, status, deadline, deadline_type, created_by_kid, recurring, recurring_parent_id } = req.body;
+  const { id, title, description, points, duration, category, difficulty, assigned_to, created_by, status, deadline, deadline_type, created_by_kid, recurring, recurring_parent_id, taskType } = req.body;
   const stmt = db.prepare(
-    `INSERT INTO tasks (id, title, description, points, duration, category, difficulty, assigned_to, created_by, status, deadline, deadline_type, created_by_kid, recurring, recurring_parent_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO tasks (id, title, description, points, duration, category, difficulty, assigned_to, created_by, status, deadline, deadline_type, created_by_kid, recurring, recurring_parent_id, taskType)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   );
-  stmt.run(id, title, description, points || 0, duration, category, difficulty, assigned_to, created_by, status || 'available', deadline, deadline_type, created_by_kid || 0, recurring || 'none', recurring_parent_id || null);
+  stmt.run(id, title, description, points || 0, duration, category, difficulty, assigned_to, created_by, status || 'available', deadline, deadline_type, created_by_kid || 0, recurring || 'none', recurring_parent_id || null, taskType || 'optional');
   res.json(req.body);
 });
 
 app.put('/api/tasks/:id', (req, res) => {
   const { id } = req.params;
-  const { title, description, points, duration, category, difficulty, assigned_to, status, completed_at, deadline, deadline_type, return_reason, recurring, recurring_parent_id } = req.body;
+  const { title, description, points, duration, category, difficulty, assigned_to, status, completed_at, deadline, deadline_type, return_reason, recurring, recurring_parent_id, taskType } = req.body;
   const stmt = db.prepare(
     `UPDATE tasks SET title = ?, description = ?, points = ?, duration = ?, category = ?, difficulty = ?,
-     assigned_to = ?, status = ?, completed_at = ?, deadline = ?, deadline_type = ?, return_reason = ?, recurring = ?, recurring_parent_id = ? WHERE id = ?`
+     assigned_to = ?, status = ?, completed_at = ?, deadline = ?, deadline_type = ?, return_reason = ?, recurring = ?, recurring_parent_id = ?, taskType = ? WHERE id = ?`
   );
-  stmt.run(title, description, points, duration, category, difficulty, assigned_to, status, completed_at, deadline, deadline_type, return_reason, recurring, recurring_parent_id, id);
+  stmt.run(title, description, points, duration, category, difficulty, assigned_to, status, completed_at, deadline, deadline_type, return_reason, recurring, recurring_parent_id, taskType, id);
   res.json(req.body);
 });
 
