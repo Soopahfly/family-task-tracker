@@ -6,6 +6,18 @@ export default function WhatsNew() {
 
   const changelog = [
     {
+      version: '2.3.3',
+      date: 'December 2025',
+      changes: [
+        {
+          icon: Code2,
+          color: 'text-blue-600 bg-blue-50',
+          title: 'Task Editing with Password Protection',
+          description: 'Added ability to edit existing tasks! Click the blue edit button on any task to modify its title, description, points, assignment, category, or recurring settings. Requires parent password for security, preventing kids from changing task details.'
+        }
+      ]
+    },
+    {
       version: '2.3.2',
       date: 'December 2025',
       changes: [

@@ -1,9 +1,15 @@
 import { useState } from 'react'
-import { ListTodo, Plus, X, Calendar, Filter } from 'lucide-react'
+import { ListTodo, Plus, X, Calendar, Filter, Edit2, Lock } from 'lucide-react'
 import { tasksAPI } from '../utils/api'
+import { verifyPassword } from '../utils/authManager'
 
 function TaskManagement({ familyMembers, tasks, setTasks }) {
   const [showForm, setShowForm] = useState(false)
+  const [editingTask, setEditingTask] = useState(null)
+  const [showPasswordPrompt, setShowPasswordPrompt] = useState(false)
+  const [passwordAction, setPasswordAction] = useState(null)
+  const [password, setPassword] = useState('')
+  const [passwordError, setPasswordError] = useState('')
   const [filterMemberId, setFilterMemberId] = useState('all')
   const [formData, setFormData] = useState({
     title: '',
@@ -21,33 +27,94 @@ function TaskManagement({ familyMembers, tasks, setTasks }) {
     { value: 'weekly', label: 'Weekly' }
   ]
 
+  const handlePasswordVerification = async () => {
+    setPasswordError('')
+    const result = await verifyPassword(password)
+
+    if (result.success) {
+      setPassword('')
+      setShowPasswordPrompt(false)
+
+      if (passwordAction) {
+        passwordAction()
+        setPasswordAction(null)
+      }
+    } else {
+      setPasswordError('Incorrect password')
+    }
+  }
+
+  const requestPasswordForEdit = (task) => {
+    setPasswordAction(() => () => startEditTask(task))
+    setShowPasswordPrompt(true)
+  }
+
+  const startEditTask = (task) => {
+    setEditingTask(task)
+    setFormData({
+      title: task.title,
+      description: task.description || '',
+      points: task.points,
+      kidId: task.assigned_to || '',
+      category: task.category,
+      recurring: task.recurring || 'none'
+    })
+    setShowForm(true)
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
-    const newTask = {
-      id: Date.now().toString(),
-      title: formData.title,
-      description: formData.description,
-      points: parseInt(formData.points),
-      category: formData.category,
-      difficulty: 'medium',
-      assigned_to: formData.kidId || null,
-      created_by: null,
-      status: 'available',
-      recurring: formData.recurring,
-      recurring_parent_id: null,
-      created_at: new Date().toISOString()
-    }
 
-    try {
-      await tasksAPI.create(newTask)
-      // Fetch updated tasks from server to ensure consistency
-      const updatedTasks = await tasksAPI.getAll()
-      setTasks(updatedTasks)
-      setFormData({ title: '', description: '', points: 10, kidId: '', category: 'chore', recurring: 'none' })
-      setShowForm(false)
-    } catch (error) {
-      console.error('Failed to create task:', error)
-      alert('Failed to create task. Please try again.')
+    if (editingTask) {
+      // Update existing task
+      const updatedTask = {
+        ...editingTask,
+        title: formData.title,
+        description: formData.description,
+        points: parseInt(formData.points),
+        category: formData.category,
+        assigned_to: formData.kidId || null,
+        recurring: formData.recurring
+      }
+
+      try {
+        await tasksAPI.update(editingTask.id, updatedTask)
+        const updatedTasks = await tasksAPI.getAll()
+        setTasks(updatedTasks)
+        setFormData({ title: '', description: '', points: 10, kidId: '', category: 'chore', recurring: 'none' })
+        setShowForm(false)
+        setEditingTask(null)
+      } catch (error) {
+        console.error('Failed to update task:', error)
+        alert('Failed to update task. Please try again.')
+      }
+    } else {
+      // Create new task
+      const newTask = {
+        id: Date.now().toString(),
+        title: formData.title,
+        description: formData.description,
+        points: parseInt(formData.points),
+        category: formData.category,
+        difficulty: 'medium',
+        assigned_to: formData.kidId || null,
+        created_by: null,
+        status: 'available',
+        recurring: formData.recurring,
+        recurring_parent_id: null,
+        created_at: new Date().toISOString()
+      }
+
+      try {
+        await tasksAPI.create(newTask)
+        const updatedTasks = await tasksAPI.getAll()
+        setTasks(updatedTasks)
+        setFormData({ title: '', description: '', points: 10, kidId: '', category: 'chore', recurring: 'none' })
+        setShowForm(false)
+      } catch (error) {
+        console.error('Failed to create task:', error)
+        alert('Failed to create task. Please try again.')
+      }
     }
   }
 
@@ -117,6 +184,9 @@ function TaskManagement({ familyMembers, tasks, setTasks }) {
 
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-purple-50 p-6 rounded-xl mb-6">
+          <h3 className="text-lg font-bold text-gray-800 mb-4">
+            {editingTask ? 'Edit Task' : 'Add New Task'}
+          </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Task Title</label>
@@ -204,11 +274,15 @@ function TaskManagement({ familyMembers, tasks, setTasks }) {
               type="submit"
               className="bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700"
             >
-              Add Task
+              {editingTask ? 'Update Task' : 'Add Task'}
             </button>
             <button
               type="button"
-              onClick={() => setShowForm(false)}
+              onClick={() => {
+                setShowForm(false)
+                setEditingTask(null)
+                setFormData({ title: '', description: '', points: 10, kidId: '', category: 'chore', recurring: 'none' })
+              }}
               className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:bg-gray-400"
             >
               Cancel
@@ -276,19 +350,82 @@ function TaskManagement({ familyMembers, tasks, setTasks }) {
                       )}
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleDelete(task.id)}
-                    className="text-red-500 hover:bg-red-50 p-2 rounded-lg"
-                    title={isRecurringTemplate ? 'Delete recurring template (stops future instances)' : 'Delete task'}
-                  >
-                    <X size={20} />
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => requestPasswordForEdit(task)}
+                      className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg"
+                      title="Edit task (requires password)"
+                    >
+                      <Edit2 size={20} />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(task.id)}
+                      className="text-red-500 hover:bg-red-50 p-2 rounded-lg"
+                      title={isRecurringTemplate ? 'Delete recurring template (stops future instances)' : 'Delete task'}
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
                 </div>
               </div>
             )
           })
         )}
       </div>
+
+      {/* Password Prompt Modal */}
+      {showPasswordPrompt && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
+            <div className="text-center mb-6">
+              <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Lock size={32} className="text-blue-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Edit Task</h2>
+              <p className="text-gray-600">Enter parent password to edit this task</p>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handlePasswordVerification()}
+                autoFocus
+                className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter password"
+              />
+              {passwordError && (
+                <p className="mt-2 text-sm text-red-600 font-semibold">{passwordError}</p>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handlePasswordVerification}
+                disabled={!password}
+                className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                Verify
+              </button>
+              <button
+                onClick={() => {
+                  setShowPasswordPrompt(false)
+                  setPassword('')
+                  setPasswordError('')
+                  setPasswordAction(null)
+                }}
+                className="px-6 bg-gray-200 text-gray-700 py-3 rounded-lg font-bold hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
