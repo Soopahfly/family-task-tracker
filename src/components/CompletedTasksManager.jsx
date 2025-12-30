@@ -12,6 +12,7 @@ export default function CompletedTasksManager({ familyMembers }) {
   const [deletePassword, setDeletePassword] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [taskToDelete, setTaskToDelete] = useState(null)
+  const [removePoints, setRemovePoints] = useState(false)
 
   const [formData, setFormData] = useState({
     family_member_id: '',
@@ -100,6 +101,7 @@ export default function CompletedTasksManager({ familyMembers }) {
     setTaskToDelete(task)
     setShowDeleteConfirm(true)
     setDeletePassword('')
+    setRemovePoints(false)
   }
 
   const handleConfirmDelete = async (e) => {
@@ -116,11 +118,24 @@ export default function CompletedTasksManager({ familyMembers }) {
     }
 
     try {
-      // Delete from history (would need server endpoint)
-      alert('Delete functionality requires server endpoint - use database script for now')
+      // Delete from history with optional point removal
+      const result = await taskHistoryAPI.delete(taskToDelete.id, removePoints)
+
+      if (result.success) {
+        // If points were removed, reload the entire page to update family member points
+        if (removePoints) {
+          alert(`Task deleted and ${result.pointsRemoved} points removed from ${getMemberName(taskToDelete.family_member_id)}!`)
+          window.location.reload()
+        } else {
+          // Just reload task history
+          loadTaskHistory()
+        }
+      }
+
       setShowDeleteConfirm(false)
       setTaskToDelete(null)
       setDeletePassword('')
+      setRemovePoints(false)
     } catch (error) {
       console.error('Failed to delete task:', error)
       alert('Failed to delete task.')
@@ -305,11 +320,28 @@ export default function CompletedTasksManager({ familyMembers }) {
                 {getMemberName(taskToDelete.family_member_id)} • {taskToDelete.points_earned} pts
               </p>
             </div>
-            <p className="text-sm font-semibold text-red-600 mb-4">
-              ⚠️ This will NOT remove points already earned!
-            </p>
 
             <form onSubmit={handleConfirmDelete}>
+              <div className="mb-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={removePoints}
+                    onChange={(e) => setRemovePoints(e.target.checked)}
+                    className="w-5 h-5 text-red-600 rounded focus:ring-2 focus:ring-red-500"
+                  />
+                  <span className="text-sm font-semibold text-gray-700">
+                    Remove {taskToDelete.points_earned} points from {getMemberName(taskToDelete.family_member_id)}
+                  </span>
+                </label>
+                <p className="text-xs text-gray-500 ml-7 mt-1">
+                  {removePoints
+                    ? '⚠️ Points will be deducted from the member\'s total'
+                    : 'Points will remain with the member'
+                  }
+                </p>
+              </div>
+
               {localStorage.getItem('hasPassword') === 'true' && (
                 <div className="mb-4">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">

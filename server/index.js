@@ -841,14 +841,55 @@ app.get('/api/task-history/:memberId', (req, res) => {
 app.post('/api/task-history', (req, res) => {
   const { id, task_id, task_title, family_member_id, points_earned, completed_at, category, difficulty } = req.body;
 
-  const stmt = db.prepare(`
-    INSERT INTO task_history (id, task_id, task_title, family_member_id, points_earned, completed_at, category, difficulty)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `);
+  try {
+    const stmt = db.prepare(`
+      INSERT INTO task_history (id, task_id, task_title, family_member_id, points_earned, completed_at, category, difficulty)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
 
-  stmt.run(id, task_id || null, task_title, family_member_id, points_earned, completed_at, category || null, difficulty || null);
+    stmt.run(id, task_id || null, task_title, family_member_id, points_earned, completed_at, category || null, difficulty || null);
 
-  res.json({ success: true, id });
+    console.log(`✅ Added historical task: ${task_title} for member ${family_member_id} (${points_earned} pts)`);
+
+    res.json({ success: true, id });
+  } catch (error) {
+    console.error('Failed to add task history:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Delete task history entry and optionally remove points
+app.delete('/api/task-history/:id', (req, res) => {
+  const { id } = req.params;
+  const { removePoints } = req.query; // ?removePoints=true
+
+  try {
+    // Get the task history entry before deleting
+    const historyEntry = db.prepare('SELECT * FROM task_history WHERE id = ?').get(id);
+
+    if (!historyEntry) {
+      return res.status(404).json({ success: false, error: 'Task history entry not found' });
+    }
+
+    // Delete from task_history
+    db.prepare('DELETE FROM task_history WHERE id = ?').run(id);
+
+    // If removePoints is true, subtract points from family member
+    if (removePoints === 'true') {
+      db.prepare('UPDATE family_members SET points = points - ? WHERE id = ?')
+        .run(historyEntry.points_earned, historyEntry.family_member_id);
+
+      console.log(`🔻 Removed ${historyEntry.points_earned} points from member ${historyEntry.family_member_id}`);
+    }
+
+    res.json({
+      success: true,
+      pointsRemoved: removePoints === 'true' ? historyEntry.points_earned : 0
+    });
+  } catch (error) {
+    console.error('Failed to delete task history:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 // Serve static files in production

@@ -194,6 +194,9 @@ export const taskHistoryAPI = {
     method: 'POST',
     body: JSON.stringify(entry),
   }),
+  delete: (id, removePoints = false) => apiCall(`/api/task-history/${id}?removePoints=${removePoints}`, {
+    method: 'DELETE',
+  }),
 };
 
 // Task Completion (with achievements, streaks, history integration)
