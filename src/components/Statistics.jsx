@@ -4,7 +4,6 @@ function Statistics({ familyMembers, tasks }) {
   const getKidStats = (kid) => {
     const kidTasks = tasks.filter(t => t.kidId === kid.id || t.assigned_to === kid.id)
     const completed = kidTasks.filter(t => t.completed)
-    const pending = kidTasks.filter(t => !t.completed)
 
     const completedThisWeek = completed.filter(t => {
       const weekAgo = new Date()
@@ -17,7 +16,6 @@ function Statistics({ familyMembers, tasks }) {
     return {
       total: kidTasks.length,
       completed: completed.length,
-      pending: pending.length,
       completedThisWeek: completedThisWeek.length,
       pointsEarned,
       completionRate: kidTasks.length > 0 ? Math.round((completed.length / kidTasks.length) * 100) : 0
@@ -53,7 +51,7 @@ function Statistics({ familyMembers, tasks }) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <div className="bg-blue-50 p-4 rounded-lg text-center">
                     <p className="text-3xl font-bold text-blue-600">{stats.total}</p>
                     <p className="text-sm text-gray-600">Total Tasks</p>
@@ -61,10 +59,6 @@ function Statistics({ familyMembers, tasks }) {
                   <div className="bg-green-50 p-4 rounded-lg text-center">
                     <p className="text-3xl font-bold text-green-600">{stats.completed}</p>
                     <p className="text-sm text-gray-600">Completed</p>
-                  </div>
-                  <div className="bg-orange-50 p-4 rounded-lg text-center">
-                    <p className="text-3xl font-bold text-orange-600">{stats.pending}</p>
-                    <p className="text-sm text-gray-600">Pending</p>
                   </div>
                   <div className="bg-purple-50 p-4 rounded-lg text-center">
                     <p className="text-3xl font-bold text-purple-600">{stats.completionRate}%</p>
